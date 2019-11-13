@@ -22,6 +22,7 @@ async function sendMessage(message) {
         body: message.toJson(),
         json: true
     };
+    logger.trace("Sending message", message.toJson());
 
     try {
         let {res, body} = await asyncRequest(API_URL, options);

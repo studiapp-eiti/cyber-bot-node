@@ -81,6 +81,12 @@ function insertUser(user) {
     return asyncQuery(query, user.asArray());
 }
 
+async function queryUserById(id) {
+    const sql = `SELECT ${FIELDS_USER.join(",")},is_registered FROM ${TABLE_USERS} WHERE id = ?`;
+    const {result} = await asyncQuery(sql, [id]);
+    return result[0] !== undefined ? User.fromSql(result[0]) : null;
+}
+
 async function queryUserByFbId(facebook_id) {
     const sql = `SELECT ${FIELDS_USER.join(",")},is_registered FROM ${TABLE_USERS} WHERE facebook_id = ?`;
     const {result} = await asyncQuery(sql, [facebook_id]);
@@ -127,6 +133,7 @@ module.exports.insertMessage = insertMessage;
 module.exports.insertEvent = insertEvent;
 module.exports.insertUser = insertUser;
 module.exports.queryUserByFbId = queryUserByFbId;
+module.exports.queryUserById = queryUserById;
 
 module.exports.deleteAuthRow = deleteAuthRow;
 module.exports.insertLoginAttempt = insertLoginAttempt;

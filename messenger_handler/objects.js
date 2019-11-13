@@ -25,15 +25,16 @@ class MessagingBase {
     }
 
     reply(text) {
-        return new Message(null, this.recipient, this.sender, new Date(), text);
+        return new Message(null, this.recipient, this.sender, new Date(), text, Message.TYPE_RESPONSE);
     }
 }
 
 class Message extends MessagingBase {
-    constructor(id, sender, recipient, timestamp, text) {
+    constructor(id, sender, recipient, timestamp, text, type) {
         super(sender, recipient, timestamp);
         this.text = text;
         this.id = id;
+        this.type = type;
     }
 
     /**
@@ -42,6 +43,7 @@ class Message extends MessagingBase {
      * @return {Message}
      */
     static fromJson(json) {
+        logger.trace(json);
         if(!json.hasOwnProperty("messaging")) {
             throw new Error("Invalid json");
         }
@@ -69,7 +71,7 @@ class Message extends MessagingBase {
 
     toJson() {
         return {
-            messaging_type: "NON_PROMOTIONAL_SUBSCRIPTION",
+            messaging_type: this.type,
             recipient: {
                 id: this.recipient
             },
@@ -81,6 +83,22 @@ class Message extends MessagingBase {
 }
 
 Message.ALL_FIELDS = ["id", "sender", "recipient", "timestamp", "text"];
+Message.TYPE_RESPONSE = "RESPONSE";
+Message.TYPE_UPDATE = "UPDATE";
+Message.TYPE_TAG = "MESSAGE_TAG";
+Message.TAG_CONFIRMED_EVENT_UPDATE = "CONFIRMED_EVENT_UPDATE";
+
+class UpdateMessage extends Message {
+    constructor(id, sender, recipient, timestamp, text) {
+        super(id, sender, recipient, timestamp, text, Message.TYPE_TAG);
+    }
+
+    toJson() {
+        const json = super.toJson();
+        json.tag = Message.TAG_CONFIRMED_EVENT_UPDATE;
+        return json;
+    }
+}
 
 class Event extends MessagingBase {
     constructor(sender, recipient, timestamp, text, payload) {
@@ -482,6 +500,7 @@ class ListTemplate extends Template {
 
 module.exports.MessagingBase = MessagingBase;
 module.exports.Message = Message;
+module.exports.UpdateMessage = UpdateMessage;
 module.exports.Event = Event;
 module.exports.AccountLinkingEvent = AccountLinkingEvent;
 

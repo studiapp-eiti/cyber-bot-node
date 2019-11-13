@@ -1,15 +1,11 @@
 'use strict';
-const LogoutButton = require("./objects").LogoutButton;
-const AccountLinkingHandler = require("./objects").AccountLinkingHandler;
-const LocationQuickReply = require("./objects").LocationQuickReply;
-const TextQuickReply = require("./objects").TextQuickReply;
-const QuickReplyCreator = require("./objects").QuickReplyCreator;
-const ButtonTemplate = require("./objects").ButtonTemplate;
-const LoginButton = require("./objects").LoginButton;
-const MessageHandler = require("./objects").MessageHandler;
-const EventHandler = require("./objects").EventHandler;
-const AccountLinkingEvent = require("./objects").AccountLinkingEvent;
-const BaseHandler = require("./objects").BaseHandler;
+const api = require("./api_manager");
+const {
+    LogoutButton, AccountLinkingHandler, LocationQuickReply,
+    TextQuickReply, QuickReplyCreator, ButtonTemplate, LoginButton,
+    MessageHandler, UpdateMessage, EventHandler, AccountLinkingEvent, BaseHandler
+}
+    = require("./objects");
 const User = require("../global_objects").User;
 const sql = require("../database").sql;
 const logger = require("log4js").getLogger();
@@ -59,4 +55,20 @@ async function processRequest(json) {
     }
 }
 
+async function sendNotification(user_ids, text) {
+    for(const user_id of user_ids) {
+        const user = await User.byId(user_id);
+        if(user === null) {
+            logger.warn("Invalid user id for notify", user_id);
+            continue;
+        }
+        let msg = new UpdateMessage(null, process.env.MSG_DEFAULT_SENDER_ID, user.facebook_id, new Date(), text);
+        logger.trace(msg);
+        msg = await api.sendMessage(msg);
+        await sql.insertMessage(msg);
+        logger.debug("Sending notification to", user_id);
+    }
+}
+
 module.exports.process = processRequest;
+module.exports.notify = sendNotification;

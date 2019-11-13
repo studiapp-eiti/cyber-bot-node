@@ -55,7 +55,6 @@ app.post(process.env.BOT_WEBHOOK_PATH, async(req, res) => {
     } else {
         res.sendStatus(404);
     }
-
 });
 
 app.get(process.env.BOT_WEBHOOK_PATH, (req, res) => {
@@ -77,12 +76,12 @@ app.get(process.env.BOT_WEBHOOK_PATH, (req, res) => {
 
 app.get(process.env.BOT_REGISTER_PATH, async(req, res) => {
     const user = await User.fromMessengerLinkingToken(req.query.account_linking_token);
-    logger.debug("Registering user", user.id);
-
     if(user === null) {
         res.redirect(req.query.redirect_uri);
         return;
     }
+
+    logger.debug("Registering user", user.id);
 
     const request_data = {
         url: "https://apps.usos.pw.edu.pl/services/oauth/request_token",
@@ -158,6 +157,18 @@ app.get(process.env.BOT_USOS_OAUTH_CALLBACK_PATH, async(req, res) => {
         logger.debug("Registered successfully user_id -", user_id);
         res.redirect(`${login_flow.messenger_callback_url}&authorization_code=${login_flow.messenger_auth_code}`);
     });
+});
+
+app.post(process.env.BOT_NOTIFY_PATH, async(req, res) => {
+    //TODO: Validate if the request is coming from a localhost
+    let body = req.body;
+    try {
+        await messenger.notify(body.user_ids, body.text);
+        res.send(200);
+    } catch(e) {
+        logger.error(e);
+        res.send(500);
+    }
 });
 
 app.get('*', function(req, res) {

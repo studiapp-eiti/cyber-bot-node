@@ -74,6 +74,16 @@ class User {
         return user;
     }
 
+
+    /**
+     *
+     * @param id
+     * @returns {Promise<User>}
+     */
+    static async byId(id) {
+        return await sql.queryUserById(id);
+    }
+
     /**
      *
      * @param linking_token
