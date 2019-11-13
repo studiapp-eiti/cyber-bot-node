@@ -339,6 +339,9 @@ class EventHandler extends BaseHandler {
                     const buttons = [LoginButton.defaults()];
                     const template = new ButtonTemplate("Click here to log in", buttons);
                     await this.reply(template);
+                } else {
+                    await this.reply("Your account has already been linked");
+                    await this.reply("You can manage your notification settings using the menu");
                 }
                 break;
             }

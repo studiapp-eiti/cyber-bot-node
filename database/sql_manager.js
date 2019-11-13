@@ -115,6 +115,11 @@ function updateUsosTokensForUserId(user_id, usos_token_key, usos_token_secret) {
     return asyncQuery(sql, [usos_token_key, usos_token_secret, user_id])
 }
 
+function updateUserRegistered(user_id, registered = true) {
+    const sql = `UPDATE ${TABLE_USERS} SET is_registered = ? WHERE id = ?`;
+    return asyncQuery(sql, [registered, user_id])
+}
+
 module.exports.connect = connect;
 module.exports.disconnect = disconnect;
 
@@ -127,3 +132,4 @@ module.exports.deleteAuthRow = deleteAuthRow;
 module.exports.insertLoginAttempt = insertLoginAttempt;
 module.exports.getLoginFlowByToken = getLoginFlowByToken;
 module.exports.updateUsosTokensForUserId = updateUsosTokensForUserId;
+module.exports.updateUserRegistered = updateUserRegistered;

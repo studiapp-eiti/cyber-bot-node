@@ -10,6 +10,7 @@ const MessageHandler = require("./objects").MessageHandler;
 const EventHandler = require("./objects").EventHandler;
 const AccountLinkingEvent = require("./objects").AccountLinkingEvent;
 const BaseHandler = require("./objects").BaseHandler;
+const User = require("../global_objects").User;
 const sql = require("../database").sql;
 const logger = require("log4js").getLogger();
 
@@ -41,11 +42,20 @@ async function processRequest(json) {
         let status = await handler.updateUser();
         if(status === AccountLinkingEvent.STATUS_LINKED) {
             await handler.reply("Your USOS account has been linked successfully!");
+            await handler.reply("You can manage your notification settings using the menu");
         } else if(status === AccountLinkingEvent.STATUS_UNLINKED) {
-            await handler.reply("Your Librus account has been unlinked successfully!");
+            const user = await User.fromFacebookId(handler.request.sender);
+            if(user === null) {
+                logger.error("Unlinking nonexistent user id", handler.request.sender);
+            } else {
+                logger.debug("Unlinked successfully, user", user.id);
+                await sql.updateUsosTokensForUserId(user.id, null, null);
+                await sql.updateUserRegistered(user.id, false);
+            }
+            await handler.reply("Your USOS account has been unlinked successfully!");
         }
     } else {
-        throw new Error("Invalid Object: ", handler);
+        throw new Error(`Invalid Object: ${typeof handler}`);
     }
 }
 

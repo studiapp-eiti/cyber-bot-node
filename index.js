@@ -77,8 +77,11 @@ app.get(process.env.BOT_WEBHOOK_PATH, (req, res) => {
 
 app.get(process.env.BOT_REGISTER_PATH, async(req, res) => {
     const user = await User.fromMessengerLinkingToken(req.query.account_linking_token);
+    logger.debug("Registering user", user.id);
+
     if(user === null) {
         res.redirect(req.query.redirect_uri);
+        return;
     }
 
     const request_data = {
@@ -112,6 +115,7 @@ app.get(process.env.BOT_REGISTER_PATH, async(req, res) => {
             data.oauth_token_secret
         );
 
+        logger.debug("Got USOS tokens, redirecting to authorize for user", user.id);
         res.redirect(`https://apps.usos.pw.edu.pl/services/oauth/authorize?oauth_token=${data.oauth_token}`);
     });
 });
@@ -124,7 +128,8 @@ app.get(process.env.BOT_USOS_OAUTH_CALLBACK_PATH, async(req, res) => {
         secret: login_flow.usos_oauth_secret
     };
 
-    logger.trace(login_flow);
+    const user_id = login_flow.user_id;
+    logger.debug("Received USOS token callback for user", user_id);
 
     const request_data = {
         url: "https://apps.usos.pw.edu.pl/services/oauth/access_token",
@@ -147,7 +152,10 @@ app.get(process.env.BOT_USOS_OAUTH_CALLBACK_PATH, async(req, res) => {
 
         const json = qs.parse(body);
 
-        await sql.updateUsosTokensForUserId(login_flow.user_id, json.oauth_token, json.oauth_token_secret);
+        await sql.updateUsosTokensForUserId(user_id, json.oauth_token, json.oauth_token_secret);
+        await sql.updateUserRegistered(user_id, true);
+
+        logger.debug("Registered successfully user_id -", user_id);
         res.redirect(`${login_flow.messenger_callback_url}&authorization_code=${login_flow.messenger_auth_code}`);
     });
 });
