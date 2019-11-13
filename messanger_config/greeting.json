@@ -1,0 +1,12 @@
+{
+  "greeting": [
+    {
+      "locale": "default",
+      "text": "This Bot will deliver notifications for your class group and announcements from Librus"
+    },
+    {
+      "locale": "pl_PL",
+      "text": "Bot może wysyłać powiadomienia o postach na grupie klasowej, jak również ogłoszenia z Librusa dotyczące naszej klasy"
+    }
+  ]
+}
