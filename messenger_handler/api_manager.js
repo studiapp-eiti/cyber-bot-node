@@ -2,9 +2,9 @@
 const request = require('request');
 const logger = require("log4js").getLogger();
 
-const API_URL = "https://graph.facebook.com/v5.0/me/messages?access_token=" + process.env.MSG_TOKEN;
-const PROFILE_URL = "https://graph.facebook.com/v5.0/$pid$" +
-                    "?fields=first_name,last_name,gender,locale,id&access_token=" + process.env.MSG_TOKEN;
+const API_BASE = "https://graph.facebook.com/v5.0";
+const API_URL = `${API_BASE}/me/messages?access_token=${process.env.MSG_TOKEN}`;
+const PROFILE_URL = `${API_BASE}/$pid$?fields=first_name,last_name,gender,locale,id&access_token=${process.env.MSG_TOKEN}`;
 
 const ACTION_SEEN = "mark_seen";
 const ACTION_TYPING_ON = "typing_on";

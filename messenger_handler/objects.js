@@ -333,7 +333,7 @@ class EventHandler extends BaseHandler {
         switch(this.request.payload) {
             case "get_started": {
                 const user = await User.fromFacebookId(this.request.sender);
-                await this.reply("Hi " + user["first_name"] + ", thanks for clicking get started!");
+                await this.reply(`Hi ${user["first_name"]}, thanks for clicking get started!`);
                 if(!user.is_registered) {
                     await this.reply("You have to register to be able to use this bot's features");
                     const buttons = [LoginButton.defaults()];
