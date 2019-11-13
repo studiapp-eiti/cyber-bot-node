@@ -2,11 +2,11 @@
   "greeting": [
     {
       "locale": "default",
-      "text": "This Bot will deliver notifications for your class group and announcements from Librus"
+      "text": "This Bot can notify you about grades, assignments and your schedule at EiTI"
     },
     {
       "locale": "pl_PL",
-      "text": "Bot może wysyłać powiadomienia o postach na grupie klasowej, jak również ogłoszenia z Librusa dotyczące naszej klasy"
+      "text": "Bot może wysyłać powiadomienia dotyczące nowych ocen, prac domowych i planu zajęć na EiTI"
     }
   ]
 }
