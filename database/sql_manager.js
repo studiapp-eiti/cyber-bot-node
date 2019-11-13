@@ -50,7 +50,8 @@ function disconnect() {
  * @return {Promise}
  */
 function insertMessage(message) {
-    let sql = `INSERT INTO ${TABLE_MESSAGES} (${FIELDS_MESSAGE.join(",")}) VALUES (?, ?, ?, ?, ?)`;
+    let sql = `INSERT INTO ${TABLE_MESSAGES} (${FIELDS_MESSAGE.join(",")}) VALUES (?, ?, ?, ?, ?) 
+               ON DUPLICATE KEY UPDATE text = VALUES (text)`;
     return asyncQuery(sql, message.asArray());
 }
 
@@ -59,7 +60,8 @@ function insertMessage(message) {
  * @param {Event} event
  */
 function insertEvent(event) {
-    let sql = `INSERT INTO ${TABLE_EVENTS} (${FIELDS_EVENT.join(",")}) VALUES (?, ?, ?, ?, ?)`;
+    let sql = `INSERT INTO ${TABLE_EVENTS} (${FIELDS_EVENT.join(",")}) VALUES (?, ?, ?, ?, ?)
+               ON DUPLICATE KEY UPDATE text = VALUES (text)`;
     return asyncQuery(sql, event.asArray());
 }
 
@@ -79,7 +81,7 @@ function insertUser(user) {
 async function queryUserByFbId(facebook_id) {
     let sql = `SELECT ${FIELDS_USER.join(",")},is_registered FROM ${TABLE_USERS} WHERE facebook_id = ?`;
     let {result} = await asyncQuery(sql, [facebook_id]);
-    return User.fromSql(result[0]) || null;
+    return result[0] !== undefined ? User.fromSql(result[0]) : null;
 }
 
 async function deleteAuthRow(auth_code) {
