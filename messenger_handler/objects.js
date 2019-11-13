@@ -422,7 +422,9 @@ class LoginButton extends Button {
     }
 
     static defaults() {
-        return new LoginButton(process.env.BOT_DOMAIN + process.env.BOT_REGISTER_PATH);
+        return new LoginButton(
+            "https://" + process.env.BOT_DOMAIN + process.env.BOT_PROXY_DIR + process.env.BOT_REGISTER_PATH
+        );
     }
 }
 

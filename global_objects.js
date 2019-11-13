@@ -74,6 +74,26 @@ class User {
         return user;
     }
 
+    /**
+     *
+     * @param linking_token
+     * @returns {Promise<null|User>}
+     */
+    static async fromMessengerLinkingToken(linking_token) {
+        try {
+            const {body} = await api.getUserIdForLinkingToken(linking_token);
+            const json = JSON.parse(body);
+            if(json.recipient === undefined) {
+                logger.error("Messenger linking token expired");
+                return null;
+            }
+            return await User.fromFacebookId(json.recipient);
+        } catch(e) {
+            logger.error(e);
+            return null;
+        }
+    }
+
     formatName(first_first = true) {
         if(first_first) {
             return this.first_name + " " + this.last_name;

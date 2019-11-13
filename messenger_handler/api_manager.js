@@ -5,6 +5,7 @@ const logger = require("log4js").getLogger();
 const API_BASE = "https://graph.facebook.com/v5.0";
 const API_URL = `${API_BASE}/me/messages?access_token=${process.env.MSG_TOKEN}`;
 const PROFILE_URL = `${API_BASE}/$pid$?fields=first_name,last_name,gender,locale,id&access_token=${process.env.MSG_TOKEN}`;
+const LINKING_TOKEN_URL = `${API_BASE}/me?&fields=recipient&account_linking_token=$token$&access_token=${process.env.MSG_TOKEN}`;
 
 const ACTION_SEEN = "mark_seen";
 const ACTION_TYPING_ON = "typing_on";
@@ -93,6 +94,10 @@ function getUserData(pid) {
     return asyncRequest(PROFILE_URL.replace("$pid$", pid));
 }
 
+function getUserIdForLinkingToken(linking_token) {
+    return asyncRequest(LINKING_TOKEN_URL.replace("$token$", linking_token));
+}
+
 /**
  *
  * @param url
@@ -118,3 +123,4 @@ module.exports.senderAction = senderAction;
 module.exports.sendMessage = sendMessage;
 module.exports.sendTemplate = sendTemplate;
 module.exports.getUserData = getUserData;
+module.exports.getUserIdForLinkingToken = getUserIdForLinkingToken;

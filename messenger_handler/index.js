@@ -40,7 +40,7 @@ async function processRequest(json) {
     } else if(handler instanceof AccountLinkingHandler) {
         let status = await handler.updateUser();
         if(status === AccountLinkingEvent.STATUS_LINKED) {
-            await handler.reply("Your Librus account has been linked successfully!");
+            await handler.reply("Your USOS account has been linked successfully!");
         } else if(status === AccountLinkingEvent.STATUS_UNLINKED) {
             await handler.reply("Your Librus account has been unlinked successfully!");
         }
