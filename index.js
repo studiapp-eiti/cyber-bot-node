@@ -35,13 +35,21 @@ https.createServer({
     key: fs.readFileSync(process.env.SSL_CERT_KEY),
     cert: fs.readFileSync(process.env.SSL_CERT_CERT),
     passphrase: process.env.SSL_CERT_PASS
-}, app).listen(8083);
+}, app).listen(process.env.HTTPS_PORT).on("error", (e) => {
+    logger.fatal(`Could not start HTTPS server on port ${process.env.HTTPS_PORT}`);
+    logger.fatal(e);
+    logger.info("Process finished, exit code", 1);
+    process.exit(1);
+})
+;
 
 sql.connect().then(() => {
     logger.info("Connected to MySQL");
 }).catch((err) => {
-    logger.info("MySQL error", err);
-    process.exit(1);
+    logger.fatal("MySQL error");
+    logger.fatal(err);
+    logger.info("Process finished, exit code",2);
+    process.exit(2);
 });
 
 app.post(process.env.BOT_WEBHOOK_PATH, async(req, res) => {
