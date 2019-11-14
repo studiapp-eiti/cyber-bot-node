@@ -183,7 +183,7 @@ app.post(process.env.BOT_NOTIFY_PATH, async(req, res) => {
     }
 });
 
-app.get(process.env.BOT_STUDIA_LOGIN_PATH, async (req, res) => {
+app.get(process.env.BOT_STUDIA_LOGIN_PATH, async(req, res) => {
     const programs = await sql.getStudia3Programs();
     res.send(studia3.html.generateMultiple(programs));
 });
@@ -195,9 +195,11 @@ app.post(process.env.BOT_STUDIA_LOGIN_PATH, async(req, res) => {
         const login = await sql.getStudia3LoginForId(program_id);
         const cookie = await studia3.session.attemptLogin(login, body.password);
         if(cookie !== null) {
+            logger.debug(`Successfully logged into Studia3 for ${program_id}`);
             await sql.updateStudiaCookie(program_id, cookie);
-            res.redirect(process.env.BOT_BASE_PATH+process.env.BOT_STUDIA_LOGIN_PATH);
+            res.redirect(process.env.BOT_BASE_PATH + process.env.BOT_STUDIA_LOGIN_PATH);
         } else {
+            logger.debug(`Invalid password for Studia3 for ${program_id}`);
             const courses = await sql.getStudia3Programs();
             res.send(`${studia3.html.generateMultiple(courses)}<p><b>Invalid password</b></p>`);
         }
