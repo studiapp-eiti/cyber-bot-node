@@ -47,7 +47,7 @@ class Parser {
                 } else if(locale_match !== null) {
                     this.target.query = `locale = ?`;
                     this.target.type = Parser.TARGET_COURSE;
-                    this.target.fields = [parseInt(locale_match[2])];
+                    this.target.fields = [locale_match[2]];
                 }else {
                     this.target = null;
                 }
