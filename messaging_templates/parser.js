@@ -45,9 +45,9 @@ class Parser {
                     this.target.type = Parser.TARGET_COURSE;
                     this.target.fields = [parseInt(course_match[1])];
                 } else if(locale_match !== null) {
-                    this.target.query = `locale = ?`;
-                    this.target.type = Parser.TARGET_COURSE;
-                    this.target.fields = [locale_match[2]];
+                    this.target.query = `locale LIKE ?`;
+                    this.target.type = Parser.TARGET_LOCALE;
+                    this.target.fields = [`${locale_match[2]}%`];
                 }else {
                     this.target = null;
                 }
@@ -102,6 +102,8 @@ class Parser {
                             locale = "en";
                         }
 
+
+
                         if(!Parser.TARGET_LOCALIZATION[locale].hasOwnProperty(this.target.type)) {
                             return match;
                         }
@@ -110,7 +112,7 @@ class Parser {
 
                         switch($2) {
                             case"": {
-                                return localized_target.toLocaleString;
+                                return localized_target;
                             }
                             case "capital": {
                                 return localized_target.toLowerCase()
@@ -139,14 +141,14 @@ Parser.TARGET_LOCALIZATION = {
         "male": "men",
         "female": "women",
         "registered": "registered",
-        "locale": "language",
+        "locale": "English language",
     },
     "pl": {
         "all": "wszyscy",
         "male": "panowie",
         "female": "panie",
         "registered": "zarejestrowani",
-        "locale": "język",
+        "locale": "język polski",
     }
 };
 
