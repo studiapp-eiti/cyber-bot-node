@@ -45,6 +45,7 @@ sql.connect().then(() => {
 });
 
 app.post(process.env.BOT_WEBHOOK_PATH, async(req, res) => {
+    logger.trace("Post to webhook");
     let body = req.body;
     if(body.object === "page") {
         for(const entry of body.entry) {

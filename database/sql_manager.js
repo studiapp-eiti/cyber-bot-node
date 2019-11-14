@@ -82,15 +82,26 @@ function insertUser(user) {
 }
 
 async function queryUserById(id) {
-    const sql = `SELECT ${FIELDS_USER.join(",")},is_registered FROM ${TABLE_USERS} WHERE id = ?`;
+    const sql = `SELECT ${FIELDS_USER.join(",")},is_registered, is_admin FROM ${TABLE_USERS} WHERE id = ?`;
     const {result} = await asyncQuery(sql, [id]);
     return result[0] !== undefined ? User.fromSql(result[0]) : null;
 }
 
 async function queryUserByFbId(facebook_id) {
-    const sql = `SELECT ${FIELDS_USER.join(",")},is_registered FROM ${TABLE_USERS} WHERE facebook_id = ?`;
+    const sql = `SELECT ${FIELDS_USER.join(",")},is_registered, is_admin FROM ${TABLE_USERS} WHERE facebook_id = ?`;
     const {result} = await asyncQuery(sql, [facebook_id]);
     return result[0] !== undefined ? User.fromSql(result[0]) : null;
+}
+
+async function queryUsersByTarget(target) {
+    const sql = `SELECT ${FIELDS_USER.join(",")},is_registered, is_admin FROM ${TABLE_USERS} 
+    WHERE ${target.query}`;
+    const {result} = await asyncQuery(sql, target.fields);
+    const users = [];
+    for(const row of result) {
+        users.push(User.fromSql(row));
+    }
+    return users;
 }
 
 async function deleteAuthRow(auth_code) {
@@ -134,6 +145,7 @@ module.exports.insertEvent = insertEvent;
 module.exports.insertUser = insertUser;
 module.exports.queryUserByFbId = queryUserByFbId;
 module.exports.queryUserById = queryUserById;
+module.exports.queryUsersByTarget = queryUsersByTarget;
 
 module.exports.deleteAuthRow = deleteAuthRow;
 module.exports.insertLoginAttempt = insertLoginAttempt;

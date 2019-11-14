@@ -1,3 +1,5 @@
+'use strict';
+
 const crypto = require("crypto");
 const OAuth = require("oauth-1.0a");
 

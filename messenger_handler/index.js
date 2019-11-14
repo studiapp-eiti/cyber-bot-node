@@ -1,5 +1,6 @@
 'use strict';
 const api = require("./api_manager");
+const {Parser} = require("../messaging_templates");
 const {
     LogoutButton, AccountLinkingHandler, LocationQuickReply,
     TextQuickReply, QuickReplyCreator, ButtonTemplate, LoginButton,
@@ -27,9 +28,37 @@ async function processRequest(json) {
         } else if(text.toLowerCase() === "fizyka" || text.toLowerCase() === "dropbox") {
             await handler.reply("https://www.dropbox.com/sh/x4g4lci5gnb61wc/AAAV4Skzaac-k3vrprF_nN-la?dl=0");
         } else {
-            const creator = new QuickReplyCreator(handler.request.text,
-                [new TextQuickReply("Hello", "test"), new TextQuickReply("World!", "world")]);
-            await handler.reply(creator);
+            logger.trace("Received generic message", text);
+            const sender = await User.fromFacebookId(handler.request.sender);
+            if(sender.is_admin) {
+                const parser = new Parser(text);
+                parser.parse();
+                if(parser.target !== null) {
+                    const users = await sql.queryUsersByTarget(parser.target);
+                    let count = 0;
+                    for(const u of users) {
+                        if(sender.id === u.id) {
+                            continue;
+                        }
+
+                        count++;
+                        const msg = new UpdateMessage(null,
+                            process.env.MSG_DEFAULT_SENDER_ID,
+                            u.facebook_id,
+                            new Date(),
+                            parser.replace(u)
+                        );
+
+                        await api.sendMessage(msg);
+                    }
+
+                    await handler.reply(`Sent to ${count}: '${parser.replace(sender)}'`);
+                } else {
+                    await handler.reply("Unknown command");
+                }
+            } else {
+                await handler.reply("Unknown command");
+            }
         }
     } else if(handler instanceof EventHandler) {
         await handler.handleEvent();

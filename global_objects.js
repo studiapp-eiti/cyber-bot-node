@@ -15,7 +15,7 @@ class User {
      * @param locale
      * @param is_registered
      */
-    constructor(id, first_name, last_name, facebook_id, gender, locale, is_registered) {
+    constructor(id, first_name, last_name, facebook_id, gender, locale, is_registered, is_admin) {
         this.id = id;
         this.first_name = first_name;
         this.last_name = last_name;
@@ -23,6 +23,7 @@ class User {
         this.gender = gender;
         this.locale = locale;
         this.is_registered = !!is_registered;
+        this.is_admin = !!is_admin;
     }
 
     /**
@@ -44,7 +45,7 @@ class User {
      */
     static fromJson(json) {
         return new User(null, json["first_name"], json["last_name"], json["id"],
-            json["gender"], json["locale"], false);
+            json["gender"], json["locale"], false, false);
     }
 
     /**
@@ -54,7 +55,7 @@ class User {
      */
     static fromSql(row) {
         return new User(row["id"], row["first_name"], row["last_name"], row["facebook_id"],
-            row["gender"], row["locale"], row["is_registered"]);
+            row["gender"], row["locale"], row["is_registered"], row["is_admin"]);
     }
 
     /**
