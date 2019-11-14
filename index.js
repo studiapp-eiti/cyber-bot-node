@@ -6,6 +6,7 @@ const messenger = require("./messenger_handler");
 const sql = require("./database").sql;
 const oauth = require("./usos_oauth");
 const User = require("./global_objects").User;
+const studia3 = require("./studia3_sessions");
 
 const fs = require("fs");
 const log4js = require("log4js");
@@ -13,9 +14,12 @@ const argv = require("yargs").argv;
 const https = require("https");
 const crypto = require("crypto");
 const qs = require('qs');
-const express = require('express'),
-    bodyParser = require('body-parser'),
-    app = express().use(bodyParser.json());
+const express = require('express');
+const bodyParser = require('body-parser');
+const app = express()
+    .use(bodyParser.json())
+    .use(bodyParser.urlencoded({extended: true}));
+
 const request = require("request");
 
 log4js.configure({
@@ -176,6 +180,29 @@ app.post(process.env.BOT_NOTIFY_PATH, async(req, res) => {
     } catch(e) {
         logger.error(e);
         res.send(500);
+    }
+});
+
+app.get(process.env.BOT_STUDIA_LOGIN_PATH, async (req, res) => {
+    const programs = await sql.getStudia3Programs();
+    res.send(studia3.html.generateMultiple(programs));
+});
+
+app.post(process.env.BOT_STUDIA_LOGIN_PATH, async(req, res) => {
+    const body = req.body;
+    if(body.hasOwnProperty("program_id") && body.hasOwnProperty("password")) {
+        const program_id = body.program_id;
+        const login = await sql.getStudia3LoginForId(program_id);
+        const cookie = await studia3.session.attemptLogin(login, body.password);
+        if(cookie !== null) {
+            await sql.updateStudiaCookie(program_id, cookie);
+            res.redirect(process.env.BOT_BASE_PATH+process.env.BOT_STUDIA_LOGIN_PATH);
+        } else {
+            const courses = await sql.getStudia3Programs();
+            res.send(`${studia3.html.generateMultiple(courses)}<p><b>Invalid password</b></p>`);
+        }
+    } else {
+        res.status(400).send();
     }
 });
 
