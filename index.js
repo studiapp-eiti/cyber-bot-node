@@ -101,7 +101,7 @@ app.get(process.env.BOT_REGISTER_PATH, async(req, res) => {
         url: oauth.URL_REQUEST_TOKEN,
         method: "POST",
         data: {
-            scopes: "grades",
+            scopes: "grades|offline_access|studies",
             oauth_callback: process.env.BOT_BASE_PATH + process.env.BOT_USOS_OAUTH_CALLBACK_PATH
         }
     };
