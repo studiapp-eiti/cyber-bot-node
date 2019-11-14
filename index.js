@@ -50,12 +50,11 @@ sql.connect().then(() => {
     logger.info("Connected to MySQL");
 }).catch((err) => {
     logger.fatal("[MySQL]", err);
-    logger.info("Process finished, exit code",2);
+    logger.info("Process finished, exit code", 2);
     process.exit(2);
 });
 
 app.post(process.env.BOT_WEBHOOK_PATH, async(req, res) => {
-    logger.trace("Post to webhook");
     let body = req.body;
     if(body.object === "page") {
         for(const entry of body.entry) {
@@ -99,9 +98,7 @@ app.get(process.env.BOT_REGISTER_PATH, async(req, res) => {
         method: "POST",
         data: {
             scopes: "grades",
-            oauth_callback:
-                "https://" + process.env.BOT_DOMAIN + process.env.BOT_PROXY_DIR +
-                process.env.BOT_USOS_OAUTH_CALLBACK_PATH
+            oauth_callback: process.env.BOT_BASE_PATH + process.env.BOT_USOS_OAUTH_CALLBACK_PATH
         }
     };
 
