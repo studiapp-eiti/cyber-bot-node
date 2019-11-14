@@ -36,18 +36,20 @@ https.createServer({
     cert: fs.readFileSync(process.env.SSL_CERT_CERT),
     passphrase: process.env.SSL_CERT_PASS
 }, app).listen(process.env.HTTPS_PORT).on("error", (e) => {
-    logger.fatal(`Could not start HTTPS server on port ${process.env.HTTPS_PORT}`);
-    logger.fatal(e);
-    logger.info("Process finished, exit code", 1);
-    process.exit(1);
+    if(e.code === "EADDRINUSE") {
+        logger.fatal(`Could not start HTTPS server, port ${process.env.HTTPS_PORT} already in use`);
+        logger.info("Process finished, exit code", 1);
+        process.exit(1);
+    }
+
+    logger.error("[HTTPS Server]", e);
 })
 ;
 
 sql.connect().then(() => {
     logger.info("Connected to MySQL");
 }).catch((err) => {
-    logger.fatal("MySQL error");
-    logger.fatal(err);
+    logger.fatal("[MySQL]", err);
     logger.info("Process finished, exit code",2);
     process.exit(2);
 });
