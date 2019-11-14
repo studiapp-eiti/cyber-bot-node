@@ -84,7 +84,7 @@ app.get(process.env.BOT_REGISTER_PATH, async(req, res) => {
     logger.debug("Registering user", user.id);
 
     const request_data = {
-        url: "https://apps.usos.pw.edu.pl/services/oauth/request_token",
+        url: oauth.URL_REQUEST_TOKEN,
         method: "POST",
         data: {
             scopes: "grades",
@@ -115,7 +115,7 @@ app.get(process.env.BOT_REGISTER_PATH, async(req, res) => {
         );
 
         logger.debug("Got USOS tokens, redirecting to authorize for user", user.id);
-        res.redirect(`https://apps.usos.pw.edu.pl/services/oauth/authorize?oauth_token=${data.oauth_token}`);
+        res.redirect(`${oauth.URL_AUTHORIZE}?oauth_token=${data.oauth_token}`);
     });
 });
 
@@ -131,7 +131,7 @@ app.get(process.env.BOT_USOS_OAUTH_CALLBACK_PATH, async(req, res) => {
     logger.debug("Received USOS token callback for user", user_id);
 
     const request_data = {
-        url: "https://apps.usos.pw.edu.pl/services/oauth/access_token",
+        url: oauth.URL_ACCESS_TOKEN,
         method: "POST",
         data: {
             oauth_token: token_key,
@@ -173,5 +173,5 @@ app.post(process.env.BOT_NOTIFY_PATH, async(req, res) => {
 
 app.get('*', function(req, res) {
     logger.debug("Got unknown URL: ", req.url);
-    res.status(404).send('Not found');
+    res.status(404).send("Not found");
 });
