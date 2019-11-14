@@ -6,12 +6,14 @@ const TABLE_USERS = "users";
 const TABLE_EVENTS = "msg_events";
 const TABLE_MESSAGES = "msg_messages";
 const TABLE_LOGIN_FLOW = "login_flow";
+const TABLE_STUDIA3_SESSIONS = "studia3_sessions";
 
 const FIELDS_MESSAGE = [`${TABLE_MESSAGES}.id`, "sender", "recipient", "timestamp", "text"];
 const FIELDS_EVENT = ["sender", "recipient", "timestamp", "text", "payload"];
 const FIELDS_USER = [`${TABLE_USERS}.id`, "first_name", "last_name", "facebook_id", "gender", "locale"];
 const FIELDS_LOGIN_FLOW = ["user_id", "messenger_linking_token", "messenger_callback_url",
     "messenger_auth_code", "usos_oauth_token", "usos_oauth_secret"];
+const FIELDS_STUDIA3_SESSIONS = ["maintainer_id", "studia_login", "program_id", "cookie"];
 
 const connection = sql.createConnection({
     host: process.env.DB_HOST,
@@ -23,7 +25,7 @@ const connection = sql.createConnection({
 const logger = require("log4js").getLogger();
 
 function asyncQuery(query, values) {
-    logger.trace(`Executing query '${query}' with values [${values.toString()}]`);
+    logger.trace(`Executing query '${query.replace(/\s{2,}/, " ")}' with values [${values.toString()}]`);
     return new Promise((resolve, reject) => {
         connection.query(query, values, (err, result, fields) => {
             err === null ? resolve({result: result, fields: fields}) : reject(err);
@@ -137,6 +139,25 @@ function updateUserRegistered(user_id, registered = true) {
     return asyncQuery(sql, [registered, user_id])
 }
 
+async function getStudia3Programs() {
+    const sql = `SELECT up.program_id, cookie, program_name FROM ${TABLE_STUDIA3_SESSIONS} st 
+                 JOIN usos_programs up ON up.program_id = st.program_id`;
+    const {result} = await asyncQuery(sql, []);
+    return result;
+}
+
+async function getStudia3LoginForId(course_id) {
+    const sql = `SELECT studia_login FROM ${TABLE_STUDIA3_SESSIONS} WHERE program_id = ?`;
+    const {result} = await asyncQuery(sql, [course_id]);
+    return result[0] !== undefined ? result[0].studia_login : null;
+}
+
+function updateStudiaCookie(program_id, cookie) {
+    const sql = `UPDATE ${TABLE_STUDIA3_SESSIONS} SET cookie = ?, last_login = NOW(), last_refresh = NOW()
+                 WHERE program_id = ?`;
+    return asyncQuery(sql, [cookie, program_id]);
+}
+
 module.exports.connect = connect;
 module.exports.disconnect = disconnect;
 
@@ -152,3 +173,7 @@ module.exports.insertLoginAttempt = insertLoginAttempt;
 module.exports.getLoginFlowByToken = getLoginFlowByToken;
 module.exports.updateUsosTokensForUserId = updateUsosTokensForUserId;
 module.exports.updateUserRegistered = updateUserRegistered;
+
+module.exports.getStudia3Programs = getStudia3Programs;
+module.exports.getStudia3LoginForId = getStudia3LoginForId;
+module.exports.updateStudiaCookie = updateStudiaCookie;
