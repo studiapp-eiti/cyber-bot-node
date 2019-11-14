@@ -5,6 +5,7 @@ const dateFormat = require('dateformat');
 const REGEX_TARGET = /^@([a-zA-Z\d:.-]+)/;
 const REGEX_TARGET_USER_ID = /^user:(\d+)$/;
 const REGEX_TARGET_COURSE_ID = /^course:(\d+)$/;
+const REGEX_TARGET_LOCALE = /^(lang|locale):([a-z]{2})$/;
 const REGEX_REPLACE_PROPERTY = /\$([a-z]+)\.?([a-z_]*)/g;
 
 class Parser {
@@ -34,6 +35,7 @@ class Parser {
             } else {
                 const user_match = target_str.match(REGEX_TARGET_USER_ID);
                 const course_match = target_str.match(REGEX_TARGET_COURSE_ID);
+                const locale_match = target_str.match(REGEX_TARGET_LOCALE);
                 if(user_match !== null) {
                     this.target.query = `id = ?`;
                     this.target.type = Parser.TARGET_USER;
@@ -42,7 +44,11 @@ class Parser {
                     this.target.query = `usos_course = ?`;
                     this.target.type = Parser.TARGET_COURSE;
                     this.target.fields = [parseInt(course_match[1])];
-                } else {
+                } else if(locale_match !== null) {
+                    this.target.query = `locale = ?`;
+                    this.target.type = Parser.TARGET_COURSE;
+                    this.target.fields = [parseInt(locale_match[2])];
+                }else {
                     this.target = null;
                 }
             }
@@ -56,7 +62,7 @@ class Parser {
      * @param {User} user
      */
     replace(user) {
-        const locale = user.locale.substring(0, 2);
+        let locale = user.locale.substring(0, 2);
         setLocale(dateFormat, locale);
         return this.original_text.replace(REGEX_REPLACE_PROPERTY, (match, $1, $2) => {
                 switch($1) {
@@ -92,13 +98,23 @@ class Parser {
                         break;
                     }
                     case "target": {
+                        if(!Parser.TARGET_LOCALIZATION.hasOwnProperty(locale)) {
+                            locale = "en";
+                        }
+
+                        if(!Parser.TARGET_LOCALIZATION[locale].hasOwnProperty(this.target.type)) {
+                            return match;
+                        }
+
+                        const localized_target = Parser.TARGET_LOCALIZATION[locale][this.target.type];
+
                         switch($2) {
                             case"": {
-                                return Parser.TARGET_LOCALIZATION[locale][this.target.type];
+                                return localized_target.toLocaleString;
                             }
                             case "capital": {
-                                return Parser.TARGET_LOCALIZATION[locale][this.target.type]
-                                    .toLowerCase().replace(/^\w/, c => c.toUpperCase());
+                                return localized_target.toLowerCase()
+                                    .replace(/^\w/, c => c.toUpperCase());
                             }
                         }
                     }
@@ -114,6 +130,7 @@ Parser.TARGET_FEMALE = "female";
 Parser.TARGET_MALE = "male";
 Parser.TARGET_USER = "user";
 Parser.TARGET_COURSE = "course";
+Parser.TARGET_LOCALE = "locale";
 Parser.TARGET_REGISTERED = "registered";
 
 Parser.TARGET_LOCALIZATION = {
@@ -121,13 +138,15 @@ Parser.TARGET_LOCALIZATION = {
         "all": "all",
         "male": "men",
         "female": "women",
-        "registered": "registered"
+        "registered": "registered",
+        "locale": "language",
     },
     "pl": {
         "all": "wszyscy",
         "male": "panowie",
         "female": "panie",
-        "registered": "zarejestrowani"
+        "registered": "zarejestrowani",
+        "locale": "język",
     }
 };
 
