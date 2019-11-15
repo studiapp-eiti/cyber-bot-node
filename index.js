@@ -36,8 +36,8 @@ const logger = log4js.getLogger();
 logger.info("Process started");
 
 https.createServer({
-    key: fs.readFileSync(process.env.SSL_CERT_KEY),
-    cert: fs.readFileSync(process.env.SSL_CERT_CERT),
+    key: fs.readFileSync(`${__dirname}/${process.env.SSL_CERT_KEY}`),
+    cert: fs.readFileSync(`${__dirname}/${process.env.SSL_CERT_CERT}`),
     passphrase: process.env.SSL_CERT_PASS
 }, app).listen(process.env.HTTPS_PORT).on("error", (e) => {
     if(e.code === "EADDRINUSE") {
