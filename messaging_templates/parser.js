@@ -70,6 +70,8 @@ class Parser {
                         if(user.hasOwnProperty($2)) {
                             return user[$2];
                         } else if($2 === "name") {
+                            return user.first_name;
+                        }else if($2 === "full_name") {
                             return user.formatName();
                         }
                         break;
@@ -102,13 +104,11 @@ class Parser {
                             locale = "en";
                         }
 
-
-
                         if(!Parser.TARGET_LOCALIZATION[locale].hasOwnProperty(this.target.type)) {
                             return match;
                         }
 
-                        const localized_target = Parser.TARGET_LOCALIZATION[locale][this.target.type];
+                        const localized_target = Parser.TARGET_LOCALIZATION[locale][this.target.type].toLowerCase();
 
                         switch($2) {
                             case"": {

@@ -1,4 +1,6 @@
 const api = require("./api_manager");
+const {sleep} = require("../utils");
+const {Parser} = require("../messaging_templates");
 const sql = require("../database").sql;
 const User = require("../global_objects").User;
 
@@ -315,6 +317,112 @@ class MessageHandler extends BaseHandler {
         super(requestMessage);
     }
 
+    async processGenericMessage() {
+        const sender = await User.fromFacebookId(this.request.sender);
+        if(sender.is_admin) {
+            const help_match = this.request.text.toLowerCase().match(/^help($|\s[a-z]*)/);
+            if(help_match !== null) {
+                switch(help_match[1].trim()) {
+                    case "": {
+                        await this.reply(
+                            "Broadcast usage:\n" +
+                            "@[TARGET] [CONTENT]\n\n" +
+
+                            "[TARGET] - one off: all, male, female, registered, user:[id], course:[id]\n\n" +
+
+                            "variables supported in [CONTENT]: $user, $target, $date\n\n" +
+
+                            "For more info try 'help [VARIABLE]'");
+                        return;
+                    }
+
+                    case "$user":
+                    case "user": {
+                        await this.reply(
+                            "$user - available fields:\n\n" +
+                            "name - nickname if set, first_name, otherwise\n" +
+                            "last_name - user's last name\n" +
+                            "first_name - user's first name\n" +
+                            "gender - user's gender in lowercase (only in english)\n" +
+                            "facebook_id - user's messenger id used for sending messages\n+" +
+                            "locale - user's locale ex. en_US"
+                        );
+                        return;
+                    }
+
+                    case "$date":
+                    case "date": {
+                        await this.reply(
+                            "$date - Defaults to medium date format\n" +
+                            "ex. Nov 15, 2019\n" +
+                            "available fields (localized):\n\n" +
+                            "time - current time in 24h format\n" +
+                            "day - current day of the month\n" +
+                            "weekday - weekday in long format\n" +
+                            "weekday_short - weekday in short format ex. Mon\n" +
+                            "month - current month in long format\n+" +
+                            "month_short - current month in short format ex. Oct\n+" +
+                            "month_num - current month as number\n+" +
+                            "year - current year ex. 2019"
+                        );
+                        return;
+                    }
+
+                    case "$target":
+                    case "target": {
+                        await this.reply(
+                            "$target\n" +
+                            "Allows to insert selected target to the message (localized)\n" +
+                            "Defaults to lowercase, .capital capitalizes it"
+                        );
+                        return;
+                    }
+
+                    default: {
+                        await this.reply("Invalid variable, try 'help' to see available");
+                    }
+                }
+            }
+
+            const parser = new Parser(this.request.text);
+            parser.parse();
+            if(parser.target !== null) {
+                await this.typing(true);
+
+                const users = await sql.queryUsersByTarget(parser.target);
+                let count = 0;
+                for(const u of users) {
+                    if(sender.id === u.id) {
+                        continue;
+                    }
+
+                    count++;
+                    const msg = new UpdateMessage(null,
+                        process.env.MSG_DEFAULT_SENDER_ID,
+                        u.facebook_id,
+                        new Date(),
+                        parser.replace(u)
+                    );
+
+                    await api.sendMessage(msg);
+
+                    /*
+                     * We do not want to become a high-MPS page. We can only safely send 40mps. See, for reference:
+                     * https://developers.facebook.com/docs/messenger-platform/send-messages/high-mps
+                     */
+                    await sleep(100);
+                }
+
+                await this.typing(false);
+                await this.reply(`Sent to ${count}: '${parser.replace(sender)}'`);
+            } else {
+                await this.reply("Unknown command");
+            }
+        } else {
+            await this.reply("Your input is only valid when setting your nickname");
+        }
+    }
+
     /**
      *
      * @param json
@@ -353,19 +461,25 @@ class EventHandler extends BaseHandler {
                 const user = await User.fromFacebookId(this.request.sender);
                 await this.reply(`Hi ${user["first_name"]}, thanks for clicking get started!`);
                 if(!user.is_registered) {
-                    await this.reply("You have to register to be able to use this bot's features");
+                    await this.reply("You have to log in to USOS to be able to use this bot's features");
                     const buttons = [LoginButton.defaults()];
                     const template = new ButtonTemplate("Click here to log in", buttons);
                     await this.reply(template);
                 } else {
                     await this.reply("Your account has already been linked");
-                    await this.reply("You can manage your notification settings using the menu");
+                    const settings_btn = new UrlButton(process.env.BOT_MANAGE_NOTIFICATIONS_URL, "Notification settings");
+                    const files_btn = new UrlButton(process.env.BOT_FILES_URL, "Your files");
+                    const buttons = [settings_btn, files_btn];
+                    await this.reply(new ButtonTemplate(
+                        "You can manage your notification settings and view your " +
+                        "files by clicking one of the buttons below",
+                        buttons)
+                    );
                 }
                 break;
             }
             case "info": {
-                await this.reply("This Bot has been designed for lazy people that don't won't to install " +
-                    "crappy apps by Facebook and Librus and don't bother checking their just as crappy websites");
+                await this.reply("This bot can notify you about new files, grades, assignments and your");
                 break;
             }
         }
@@ -392,19 +506,36 @@ class AccountLinkingHandler extends BaseHandler {
     }
 
     async updateUser() {
-        let status = this.status();
-        if(status === AccountLinkingEvent.STATUS_LINKED) {
+        if(this.request.status === AccountLinkingEvent.STATUS_LINKED) {
             await sql.deleteAuthRow(this.request.auth_code);
-        } else if(status === AccountLinkingEvent.STATUS_UNLINKED) {
-
+        } else if(this.request.status === AccountLinkingEvent.STATUS_UNLINKED) {
+            const user = await User.fromFacebookId(this.request.sender);
+            if(user === null) {
+                logger.error("Unlinking nonexistent user id", this.request.sender);
+            } else {
+                logger.debug("Unlinked successfully, user", user.id);
+                await sql.updateUsosTokensForUserId(user.id, null, null);
+                await sql.updateUserRegistered(user.id, false);
+            }
         } else {
             throw new Error("Unknown status: ", status);
         }
-        return status;
     }
 
-    status() {
-        return this.request.status;
+    async reply() {
+        if(status === AccountLinkingEvent.STATUS_LINKED) {
+            await super.reply("Your USOS account has been linked successfully!");
+            const settings_btn = new UrlButton(process.env.BOT_MANAGE_NOTIFICATIONS_URL, "Notification settings");
+            const files_btn = new UrlButton(process.env.BOT_FILES_URL, "Your files");
+            const buttons = [settings_btn, files_btn];
+            await super.reply(new ButtonTemplate(
+                "You can now manage your notification settings and view your " +
+                "files by clicking one of the buttons below",
+                buttons)
+            );
+        } else if(status === AccountLinkingEvent.STATUS_UNLINKED) {
+            await super.reply("Your USOS account has been unlinked successfully!");
+        }
     }
 }
 

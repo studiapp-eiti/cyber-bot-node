@@ -23,4 +23,4 @@ function sleep(ms) {
 }
 
 module.exports.asyncRequest = asyncRequest;
-module.exports.sleep = sleep();
+module.exports.sleep = sleep;
