@@ -8,7 +8,7 @@ const logger = require("log4js").getLogger();
 
 const NICKNAME_MIN_LENGTH = 1;
 const NICKNAME_MAX_LENGTH = 24;
-const REGEX_NICKNAME = /^[a-zA-Z\d]+$/;
+const REGEX_NICKNAME = /^[a-zA-Z\d_ ]+$/;
 
 class MessagingBase {
     constructor(sender, recipient, timestamp) {
@@ -358,7 +358,7 @@ class MessageHandler extends BaseHandler {
 
             if(text.match(REGEX_NICKNAME) === null) {
                 const creator = new QuickReplyCreator(
-                    "Nickname can only contain letters and numbers",
+                    "Nickname can only contain letters, numbers, spaces and underscore (_)",
                     quick_replies
                 );
                 await this.reply(creator);
