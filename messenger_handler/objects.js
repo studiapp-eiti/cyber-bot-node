@@ -485,6 +485,7 @@ class MessageHandler extends BaseHandler {
             }
         } else {
             await this.reply("Your input is only valid when setting your nickname");
+            await this.reply("Please use the menu to interact with the bot");
         }
     }
 
