@@ -8,7 +8,7 @@ const logger = require("log4js").getLogger();
 
 const NICKNAME_MIN_LENGTH = 1;
 const NICKNAME_MAX_LENGTH = 24;
-const REGEX_NICKNAME = /^[a-zA-Z\d_ ]+$/;
+const REGEX_NICKNAME = /^[a-zA-Z\d ]+$/;
 
 class MessagingBase {
     constructor(sender, recipient, timestamp) {
@@ -356,26 +356,27 @@ class MessageHandler extends BaseHandler {
                 new TextQuickReply("Cancel", "nickname_cancel")
             ];
 
-            if(text.match(REGEX_NICKNAME) === null) {
+            const sanitized_text = text.trim().replace(/\s{2,}/, " ");
+            if(sanitized_text.match(REGEX_NICKNAME) === null) {
                 const creator = new QuickReplyCreator(
-                    "Nickname can only contain letters, numbers, spaces and underscore (_)",
+                    "Nickname can only contain letters, numbers, spaces",
                     quick_replies
                 );
                 await this.reply(creator);
-            } else if(text.length > NICKNAME_MAX_LENGTH) {
+            } else if(sanitized_text.length > NICKNAME_MAX_LENGTH) {
                 const creator = new QuickReplyCreator(
                     `Nickname cannot be longer then ${NICKNAME_MAX_LENGTH} characters`,
                     quick_replies
                 );
                 await this.reply(creator);
-            } else if(text.length < NICKNAME_MIN_LENGTH) {
+            } else if(sanitized_text.length < NICKNAME_MIN_LENGTH) {
                 const creator = new QuickReplyCreator(
                     `Nickname cannot be shorter then ${NICKNAME_MIN_LENGTH} characters`,
                     quick_replies
                 );
                 await this.reply(creator);
             } else {
-                user.nickname = text;
+                user.nickname = sanitized_text;
                 user.msg_state = User.STATE_NO_STATE;
                 await user.save();
 
