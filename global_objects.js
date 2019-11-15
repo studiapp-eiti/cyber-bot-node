@@ -10,15 +10,20 @@ class User {
      * @param id
      * @param first_name
      * @param last_name
+     * @param nickname
      * @param facebook_id
+     * @param msg_state
      * @param gender
      * @param locale
      * @param is_registered
+     * @param is_admin
      */
-    constructor(id, first_name, last_name, facebook_id, gender, locale, is_registered, is_admin) {
+    constructor(id, first_name, last_name, nickname, facebook_id, msg_state, gender, locale, is_registered, is_admin) {
         this.id = id;
         this.first_name = first_name;
         this.last_name = last_name;
+        this.nickname = nickname;
+        this.msg_state = msg_state;
         this.facebook_id = facebook_id;
         this.gender = gender;
         this.locale = locale;
@@ -44,8 +49,8 @@ class User {
      * @return {User}
      */
     static fromJson(json) {
-        return new User(null, json["first_name"], json["last_name"], json["id"],
-            json["gender"], json["locale"], false, false);
+        return new User(null, json.first_name, json.last_name, null, json.id,
+            User.STATE_NO_STATE, json.gender, json.locale, false, false);
     }
 
     /**
@@ -54,8 +59,8 @@ class User {
      * @returns {User}
      */
     static fromSql(row) {
-        return new User(row["id"], row["first_name"], row["last_name"], row["facebook_id"],
-            row["gender"], row["locale"], row["is_registered"], row["is_admin"]);
+        return new User(row.id, row.first_name, row.last_name, row.nickname, row.facebook_id,
+            row.msg_state, row.gender, row.locale, row.is_registered, row.is_admin);
     }
 
     /**
@@ -74,7 +79,6 @@ class User {
 
         return user;
     }
-
 
     /**
      *
@@ -105,6 +109,10 @@ class User {
         }
     }
 
+    save() {
+        return sql.insertUser(this);
+    }
+
     formatName(first_first = true) {
         if(first_first) {
             return this.first_name + " " + this.last_name;
@@ -129,6 +137,11 @@ class User {
     }
 }
 
-User.ALL_FIELDS = ["id", "first_name", "last_name", "facebook_id", "gender", "locale"];
+User.STATE_NO_STATE = -1;
+User.STATE_ASK_NICKNAME = 100;
+User.STATE_INPUT_NICKNAME = 101;
+User.STATE_CONFIRM_NICKNAME = 102;
+
+User.ALL_FIELDS = ["id", "first_name", "last_name", "nickname", "msg_state", "facebook_id", "gender", "locale"];
 
 module.exports.User = User;

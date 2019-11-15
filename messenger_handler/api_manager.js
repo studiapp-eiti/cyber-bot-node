@@ -1,5 +1,4 @@
 'use strict';
-const request = require('request');
 const {asyncRequest} = require("../utils");
 const logger = require("log4js").getLogger();
 
@@ -23,7 +22,7 @@ async function sendMessage(message) {
         body: message.toJson(),
         json: true
     };
-    logger.trace("Sending message", message.toJson());
+    logger.trace("Sending message", JSON.stringify(message.toJson()));
 
     try {
         let {res, body} = await asyncRequest(API_URL, options);

@@ -6,6 +6,10 @@ const User = require("../global_objects").User;
 
 const logger = require("log4js").getLogger();
 
+const NICKNAME_MIN_LENGTH = 1;
+const NICKNAME_MAX_LENGTH = 24;
+const REGEX_NICKNAME = /^[a-zA-Z\d]+$/;
+
 class MessagingBase {
     constructor(sender, recipient, timestamp) {
         this.sender = sender;
@@ -113,13 +117,20 @@ class Event extends MessagingBase {
         if(!json.hasOwnProperty("messaging")) {
             throw new Error("Invalid json");
         }
-        let mess = json["messaging"][0];
+        let mess = json.messaging[0];
         if(mess.hasOwnProperty("postback")) {
-            return new Event(mess["sender"]["id"],
-                mess["recipient"]["id"],
-                new Date(mess["timestamp"]),
-                mess["postback"]["title"],
-                mess["postback"]["payload"]
+            return new Event(mess.sender.id,
+                mess.recipient.id,
+                new Date(mess.timestamp),
+                mess.postback.title,
+                mess.postback.payload
+            );
+        } else if(mess.hasOwnProperty("message") && mess.message.hasOwnProperty("quick_reply")) {
+            return new Event(mess.sender.id,
+                mess.recipient.id,
+                new Date(mess.timestamp),
+                mess.message.text,
+                mess.message.quick_reply.payload
             );
         } else {
             throw new Error(`Invalid messaging type: ${JSON.stringify(mess, 2)}`);
@@ -171,10 +182,11 @@ class QuickReplyMessage extends Message {
      * @param recipient
      * @param timestamp
      * @param text
+     * @param type
      * @param {QuickReply[]} quickReplies
      */
-    constructor(id, sender, recipient, timestamp, text, quickReplies) {
-        super(id, sender, recipient, timestamp, text);
+    constructor(id, sender, recipient, timestamp, text, type, quickReplies) {
+        super(id, sender, recipient, timestamp, text, type);
         this.quick_replies = quickReplies;
     }
 
@@ -189,11 +201,11 @@ class QuickReplyMessage extends Message {
         }
 
         return new QuickReplyMessage(message.id, message.sender, message.recipient,
-            new Date(), creator.text, creator.quick_replies);
+            new Date(), creator.text, message.type, creator.quick_replies);
     }
 
     toJson() {
-        let json = super.toJson();
+        const json = super.toJson();
         json["message"]["quick_replies"] = this.quick_replies;
         return json;
     }
@@ -252,7 +264,11 @@ class BaseHandler {
 
         let mess = json["messaging"][0];
         if(mess.hasOwnProperty("message")) {
-            return MessageHandler.fromJson(json);
+            if(mess.message.hasOwnProperty("quick_reply")) {
+                return EventHandler.fromJson(json);
+            } else {
+                return MessageHandler.fromJson(json);
+            }
         } else if(mess.hasOwnProperty("postback")) {
             return EventHandler.fromJson(json);
         } else if(mess.hasOwnProperty("account_linking")) {
@@ -318,9 +334,58 @@ class MessageHandler extends BaseHandler {
     }
 
     async processGenericMessage() {
-        const sender = await User.fromFacebookId(this.request.sender);
-        if(sender.is_admin) {
-            const help_match = this.request.text.toLowerCase().match(/^help($|\s[a-z]*)/);
+        const user = await User.fromFacebookId(this.request.sender);
+        const text = this.request.text;
+        if(user.msg_state === User.STATE_ASK_NICKNAME) {
+            const quick_replies = [
+                new TextQuickReply("Yes", "nickname_ask_yes"),
+                new TextQuickReply("No", "nickname_ask_no")
+            ];
+
+            if(user.nickname !== null) {
+                quick_replies.push(new TextQuickReply("Delete nickname", "nickname_delete"));
+            }
+
+            const creator = new QuickReplyCreator("Please use the quick replies below", quick_replies);
+            await this.reply(creator);
+            return;
+        }
+
+        if(user.msg_state === User.STATE_INPUT_NICKNAME) {
+            const quick_replies = [
+                new TextQuickReply("Cancel", "nickname_cancel")
+            ];
+
+            if(text.match(REGEX_NICKNAME) === null) {
+                const creator = new QuickReplyCreator(
+                    "Nickname can only contain letters and numbers",
+                    quick_replies
+                );
+                await this.reply(creator);
+            } else if(text.length > NICKNAME_MAX_LENGTH) {
+                const creator = new QuickReplyCreator(
+                    `Nickname cannot be longer then ${NICKNAME_MAX_LENGTH} characters`,
+                    quick_replies
+                );
+                await this.reply(creator);
+            } else if(text.length < NICKNAME_MIN_LENGTH) {
+                const creator = new QuickReplyCreator(
+                    `Nickname cannot be shorter then ${NICKNAME_MIN_LENGTH} characters`,
+                    quick_replies
+                );
+                await this.reply(creator);
+            } else {
+                user.nickname = text;
+                user.msg_state = User.STATE_NO_STATE;
+                await user.save();
+
+                await this.reply(`I will call you ${user.nickname} from now on`);
+            }
+            return;
+        }
+
+        if(user.is_admin) {
+            const help_match = text.toLowerCase().match(/^help($|\s[a-z]*)/);
             if(help_match !== null) {
                 switch(help_match[1].trim()) {
                     case "": {
@@ -384,7 +449,7 @@ class MessageHandler extends BaseHandler {
                 }
             }
 
-            const parser = new Parser(this.request.text);
+            const parser = new Parser(text);
             parser.parse();
             if(parser.target !== null) {
                 await this.typing(true);
@@ -392,7 +457,7 @@ class MessageHandler extends BaseHandler {
                 const users = await sql.queryUsersByTarget(parser.target);
                 let count = 0;
                 for(const u of users) {
-                    if(sender.id === u.id) {
+                    if(user.id === u.id) {
                         continue;
                     }
 
@@ -414,7 +479,7 @@ class MessageHandler extends BaseHandler {
                 }
 
                 await this.typing(false);
-                await this.reply(`Sent to ${count}: '${parser.replace(sender)}'`);
+                await this.reply(`Sent to ${count}: '${parser.replace(user)}'`);
             } else {
                 await this.reply("Unknown command, try 'help'");
             }
@@ -456,9 +521,9 @@ class EventHandler extends BaseHandler {
 
     async handleEvent() {
         await sql.insertEvent(this.request);
+        const user = await User.fromFacebookId(this.request.sender);
         switch(this.request.payload) {
             case "get_started": {
-                const user = await User.fromFacebookId(this.request.sender);
                 await this.reply(`Hi ${user["first_name"]}, thanks for clicking get started!`);
                 if(!user.is_registered) {
                     await this.reply("You have to log in to USOS to be able to use this bot's features");
@@ -478,8 +543,67 @@ class EventHandler extends BaseHandler {
                 }
                 break;
             }
-            case "info": {
-                await this.reply("This bot can notify you about new files, grades, assignments and your");
+            case "menu_info": {
+                await this.reply("This bot can notify you about new files, grades, assignments and your schedule");
+                break;
+            }
+            case "menu_nickname": {
+                user.msg_state = User.STATE_ASK_NICKNAME;
+                await user.save();
+
+                const quick_replies = [
+                    new TextQuickReply("Yes", "nickname_ask_yes"),
+                    new TextQuickReply("No", "nickname_ask_no")
+                ];
+
+                if(user.nickname !== null) {
+                    quick_replies.push(new TextQuickReply("Delete nickname", "nickname_delete"));
+                }
+
+                if(user.nickname === null) {
+                    const creator = new QuickReplyCreator(
+                        "You haven't set a nickname yet, would you like to set one?",
+                        quick_replies
+                    );
+                    await this.reply(creator);
+                } else {
+                    const creator = new QuickReplyCreator(
+                        `Your current nickname is '${user.nickname}', would you like to change it?`,
+                        quick_replies
+                    );
+                    await this.reply(creator);
+                }
+
+                break;
+            }
+            case "nickname_cancel":
+            case "nickname_ask_no": {
+                user.msg_state = User.STATE_NO_STATE;
+                await user.save();
+
+                await this.reply(user.nickname !== null ?
+                    `Your nickname was not changed, ${user.nickname}` :
+                    "Your nickname was not set"
+                );
+                break;
+            }
+            case "nickname_ask_yes": {
+                user.msg_state = User.STATE_INPUT_NICKNAME;
+                await user.save();
+
+                const quick_replies = [
+                    new TextQuickReply("Cancel", "nickname_cancel")
+                ];
+                const creator = new QuickReplyCreator("Input your nickname below", quick_replies);
+                await this.reply(creator);
+                break;
+            }
+            case "nickname_delete": {
+                user.msg_state = User.STATE_NO_STATE;
+                user.nickname = null;
+                await user.save();
+
+                await this.reply(`Your nickname has been removed, I will call you ${user.first_name} now`);
                 break;
             }
         }
@@ -518,7 +642,7 @@ class AccountLinkingHandler extends BaseHandler {
                 await sql.updateUserRegistered(user.id, false);
             }
         } else {
-            throw new Error("Unknown status: ", status);
+            throw new Error(`Unknown status: ${status}`);
         }
     }
 

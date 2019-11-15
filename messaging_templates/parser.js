@@ -70,7 +70,7 @@ class Parser {
                         if(user.hasOwnProperty($2)) {
                             return user[$2];
                         } else if($2 === "name") {
-                            return user.first_name;
+                            return user.nickname !== null ? user.nickname : user.first_name;
                         }else if($2 === "full_name") {
                             return user.formatName();
                         }

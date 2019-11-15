@@ -10,7 +10,8 @@ const TABLE_STUDIA3_SESSIONS = "studia3_sessions";
 
 const FIELDS_MESSAGE = [`${TABLE_MESSAGES}.id`, "sender", "recipient", "timestamp", "text"];
 const FIELDS_EVENT = ["sender", "recipient", "timestamp", "text", "payload"];
-const FIELDS_USER = [`${TABLE_USERS}.id`, "first_name", "last_name", "facebook_id", "gender", "locale"];
+const FIELDS_USER = [`${TABLE_USERS}.id`, "first_name", "last_name", "nickname", "msg_state",
+    "facebook_id", "gender", "locale"];
 const FIELDS_LOGIN_FLOW = ["user_id", "messenger_linking_token", "messenger_callback_url",
     "messenger_auth_code", "usos_oauth_token", "usos_oauth_secret"];
 const FIELDS_STUDIA3_SESSIONS = ["maintainer_id", "studia_login", "program_id", "cookie"];
@@ -26,7 +27,7 @@ const logger = require("log4js").getLogger();
 
 function asyncQuery(query, values) {
     logger.trace(`Executing query '${query.replace(/\s{2,}/, " ")}' with values ` +
-                 `[${values.map(str => str.toString().substring(0,10)).toString()}]`);
+        `[${values.map(str => str === null ? "NULL" : str.toString().substring(0, 10)).toString()}]`);
 
     return new Promise((resolve, reject) => {
         connection.query(query, values, (err, result, fields) => {
@@ -77,7 +78,7 @@ function insertEvent(event) {
  * @param {User} user
  */
 function insertUser(user) {
-    let query = `INSERT INTO ${TABLE_USERS} (${FIELDS_USER.join(",")}) VALUES (?, ?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE `;
+    let query = `INSERT INTO ${TABLE_USERS} (${FIELDS_USER.join(",")}) VALUES (?, ?, ?, ?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE `;
     for(let i = 1; i < FIELDS_USER.length; i++) {
         query += `${FIELDS_USER[i]} = VALUES(${FIELDS_USER[i]}),`
     }
