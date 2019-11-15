@@ -344,7 +344,7 @@ class MessageHandler extends BaseHandler {
                             "last_name - user's last name\n" +
                             "first_name - user's first name\n" +
                             "gender - user's gender in lowercase (only in english)\n" +
-                            "facebook_id - user's messenger id used for sending messages\n+" +
+                            "facebook_id - user's messenger id used for sending messages\n" +
                             "locale - user's locale ex. en_US"
                         );
                         return;
@@ -360,9 +360,9 @@ class MessageHandler extends BaseHandler {
                             "day - current day of the month\n" +
                             "weekday - weekday in long format\n" +
                             "weekday_short - weekday in short format ex. Mon\n" +
-                            "month - current month in long format\n+" +
-                            "month_short - current month in short format ex. Oct\n+" +
-                            "month_num - current month as number\n+" +
+                            "month - current month in long format\n" +
+                            "month_short - current month in short format ex. Oct\n" +
+                            "month_num - current month as number\n" +
                             "year - current year ex. 2019"
                         );
                         return;
