@@ -25,7 +25,9 @@ const connection = sql.createConnection({
 const logger = require("log4js").getLogger();
 
 function asyncQuery(query, values) {
-    logger.trace(`Executing query '${query.replace(/\s{2,}/, " ")}' with values [${values.toString()}]`);
+    logger.trace(`Executing query '${query.replace(/\s{2,}/, " ")}' with values ` +
+                 `[${values.map(str => str.toString().substring(0,10)).toString()}]`);
+
     return new Promise((resolve, reject) => {
         connection.query(query, values, (err, result, fields) => {
             err === null ? resolve({result: result, fields: fields}) : reject(err);
