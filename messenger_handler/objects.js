@@ -416,7 +416,7 @@ class MessageHandler extends BaseHandler {
                 await this.typing(false);
                 await this.reply(`Sent to ${count}: '${parser.replace(sender)}'`);
             } else {
-                await this.reply("Unknown command");
+                await this.reply("Unknown command, try 'help'");
             }
         } else {
             await this.reply("Your input is only valid when setting your nickname");
