@@ -18,4 +18,9 @@ function asyncRequest(url, options) {
     })
 }
 
+function sleep(ms) {
+    return new Promise((resolve => setTimeout(resolve, ms)));
+}
+
 module.exports.asyncRequest = asyncRequest;
+module.exports.sleep = sleep();

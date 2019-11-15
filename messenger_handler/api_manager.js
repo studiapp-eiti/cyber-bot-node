@@ -1,5 +1,6 @@
 'use strict';
 const request = require('request');
+const {asyncRequest} = require("../utils");
 const logger = require("log4js").getLogger();
 
 const API_BASE = "https://graph.facebook.com/v5.0";
@@ -97,23 +98,6 @@ function getUserData(pid) {
 
 function getUserIdForLinkingToken(linking_token) {
     return asyncRequest(LINKING_TOKEN_URL.replace("$token$", linking_token));
-}
-
-/**
- *
- * @param url
- * @param options
- * @return {Promise}
- */
-function asyncRequest(url, options) {
-    return new Promise((resolve, reject) => {
-        request(url, options, (err, res, body) => {
-            if(err === null)
-                resolve({res: res, body: body});
-            else
-                reject(err);
-        })
-    })
 }
 
 module.exports.ACTION_SEEN = ACTION_SEEN;

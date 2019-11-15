@@ -1,5 +1,6 @@
 'use strict';
 const api = require("./api_manager");
+const {sleep} = require("../utils");
 const {Parser} = require("../messaging_templates");
 const {
     LogoutButton, AccountLinkingHandler, LocationQuickReply,
@@ -50,6 +51,12 @@ async function processRequest(json) {
                         );
 
                         await api.sendMessage(msg);
+
+                        /*
+                         * We do not want to become a high-MPS page. We can only safely send 40mps. See, for reference:
+                         * https://developers.facebook.com/docs/messenger-platform/send-messages/high-mps
+                         */
+                        await sleep(100);
                     }
 
                     await handler.reply(`Sent to ${count}: '${parser.replace(sender)}'`);
@@ -91,10 +98,17 @@ async function sendNotification(user_ids, text) {
             logger.warn("Invalid user id for notify", user_id);
             continue;
         }
+
         let msg = new UpdateMessage(null, process.env.MSG_DEFAULT_SENDER_ID, user.facebook_id, new Date(), text);
         logger.trace(msg);
         msg = await api.sendMessage(msg);
         await sql.insertMessage(msg);
+
+        /*
+         * We do not want to become a high-MPS page. We can only safely send 40mps. See, for reference:
+         * https://developers.facebook.com/docs/messenger-platform/send-messages/high-mps
+         */
+        await sleep(100);
         logger.debug("Sending notification to", user_id);
     }
 }
