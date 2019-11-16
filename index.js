@@ -101,7 +101,7 @@ app.get(process.env.BOT_REGISTER_PATH, async(req, res) => {
         url: oauth.URL_REQUEST_TOKEN,
         method: "POST",
         data: {
-            scopes: "grades|offline_access|studies",
+            scopes: "grades|offline_access|studies|crstests",
             oauth_callback: process.env.BOT_BASE_PATH + process.env.BOT_USOS_OAUTH_CALLBACK_PATH
         }
     };
@@ -194,6 +194,7 @@ app.post(process.env.BOT_STUDIA_LOGIN_PATH, async(req, res) => {
         const program_id = body.program_id;
         const login = await sql.getStudia3LoginForId(program_id);
         const cookie = await studia3.session.attemptLogin(login, body.password);
+
         if(cookie !== null) {
             logger.debug(`Successfully logged into Studia3 for ${program_id}`);
             await sql.updateStudiaCookie(program_id, cookie);
