@@ -14,7 +14,14 @@ async function processRequest(json) {
     const handler = BaseHandler.fromJson(json);
     logger.trace(`Processing message request for ${handler.request.sender}`);
     if(handler instanceof MessageHandler) {
-        let text = handler.request.text;
+        if(handler.request.text === undefined) {
+            await handler.reply("Messages without text are not supported");
+            return;
+        }
+
+        logger.trace(handler.request);
+
+        const text = handler.request.text;
         await sql.insertMessage(handler.request);
         if(text.toLowerCase() === "login") {
             const buttons = [LoginButton.defaults()];
