@@ -644,12 +644,12 @@ class AccountLinkingHandler extends BaseHandler {
                 await sql.updateUserRegistered(user.id, false);
             }
         } else {
-            throw new Error(`Unknown status: ${status}`);
+            throw new Error(`Unknown status: ${this.request.status}`);
         }
     }
 
     async reply() {
-        if(status === AccountLinkingEvent.STATUS_LINKED) {
+        if(this.request.status === AccountLinkingEvent.STATUS_LINKED) {
             await super.reply("Your USOS account has been linked successfully!");
             const settings_btn = new UrlButton(process.env.BOT_MANAGE_NOTIFICATIONS_URL, "Notification settings");
             const files_btn = new UrlButton(process.env.BOT_FILES_URL, "Your files");
@@ -659,7 +659,7 @@ class AccountLinkingHandler extends BaseHandler {
                 "files by clicking one of the buttons below",
                 buttons)
             );
-        } else if(status === AccountLinkingEvent.STATUS_UNLINKED) {
+        } else if(this.request.status === AccountLinkingEvent.STATUS_UNLINKED) {
             await super.reply("Your USOS account has been unlinked successfully!");
         }
     }
