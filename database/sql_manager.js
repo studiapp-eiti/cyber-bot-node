@@ -21,7 +21,7 @@ const connection = sql.createConnection({
     user: process.env.DB_USER,
     password: process.env.DB_PASSWD,
     database: process.env.DB_NAME,
-    charset : 'utf8mb4'
+    charset: 'utf8mb4'
 });
 
 const logger = require("log4js").getLogger();
@@ -145,7 +145,7 @@ function updateUserRegistered(user_id, registered = true) {
 
 async function getStudia3Programs() {
     const sql = `SELECT up.program_id, cookie, program_name FROM ${TABLE_STUDIA3_SESSIONS} st 
-                 JOIN usos_programs up ON up.program_id = st.program_id`;
+                 JOIN usos_programs up ON up.program_id = st.program_id ORDER BY up.program_id`;
     const {result} = await asyncQuery(sql, []);
     return result;
 }
@@ -157,8 +157,8 @@ async function getStudia3LoginForId(course_id) {
 }
 
 function updateStudiaCookie(program_id, cookie) {
-    const sql = `UPDATE ${TABLE_STUDIA3_SESSIONS} SET cookie = ?, last_login = NOW(), last_refresh = NOW()
-                 WHERE program_id = ?`;
+    const sql = `UPDATE ${TABLE_STUDIA3_SESSIONS} SET cookie = ?, last_login = NOW(), expires = 
+                DATE_ADD(NOW(), INTERVAL 15 MINUTE) WHERE program_id = ?`;
     return asyncQuery(sql, [cookie, program_id]);
 }
 
