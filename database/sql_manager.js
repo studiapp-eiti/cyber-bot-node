@@ -144,7 +144,7 @@ function updateUserRegistered(user_id, registered = true) {
 }
 
 async function getStudia3Programs() {
-    const sql = `SELECT up.program_id, cookie, program_name FROM ${TABLE_STUDIA3_SESSIONS} st 
+    const sql = `SELECT up.program_id, cookie, program_name, last_login FROM ${TABLE_STUDIA3_SESSIONS} st 
                  JOIN usos_programs up ON up.program_id = st.program_id ORDER BY up.program_id`;
     const {result} = await asyncQuery(sql, []);
     return result;

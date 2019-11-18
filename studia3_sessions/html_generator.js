@@ -1,10 +1,11 @@
 function generateMultiple(entries) {
-    let html = "<head><title>Studia3 Login</title><meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\"></head>";
+    let html = "<head><title>Studia3 Login</title>" +
+        "<meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\"></head>";
     for(const entry of entries) {
         if(!entry.hasOwnProperty("alive")) {
             entry.alive = entry.cookie !== null;
         }
-        html += generateSingle(entry.program_name, entry.program_id, entry.alive);
+        html += generateSingle(entry.program_name, entry.program_id, entry.alive, entry.last_login);
     }
     return html;
 }
@@ -14,10 +15,12 @@ function generateMultiple(entries) {
  * @param {String} course_name
  * @param {Number} course_id
  * @param {Boolean} session_alive
+ * @param {Date} last_login
  */
-function generateSingle(course_name, course_id, session_alive) {
+function generateSingle(course_name, course_id, session_alive, last_login) {
     if(session_alive) {
-        return `<p>${course_name} <b>session alive</b></p>`;
+        return `<p>${course_name} <b>session alive</b> for 
+            ${Math.floor((Date.now() - last_login)/(60*60*1000))} hours</p>`;
     } else {
         let html = "";
         html += `<form action="" method="POST">`;
