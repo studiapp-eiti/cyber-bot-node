@@ -64,31 +64,32 @@ function senderAction(action, recipient) {
  */
 async function sendTemplate(message, template) {
     try {
-        const {res, body} = await asyncRequest(API_URL, {
+        const msg_json = message.toJson();
+        msg_json.message.attachment = {
+            type: "template",
+            payload: template
+        };
+        const options = {
             method: "POST",
-            body: {
-                recipient: {
-                    id: message.recipient
-                },
-                message: {
-                    attachment: {
-                        type: "template",
-                        payload: template
-                    }
-                }
-            },
+            body: msg_json,
             json: true
-        });
+        };
+        logger.trace("Sending message", JSON.stringify(options));
 
-        if(res.statusCode !== 200)
+        const {res, body} = await asyncRequest(API_URL, options);
+
+        if(res.statusCode !== 200) {
             logger.error(res.statusCode, body);
-        else {
-            message.id = body["message_id"]
+        } else {
+            message.id = body["message_id"];
+            return message;
         }
-    } catch(e) {
+    } catch
+        (e) {
         logger.error(e);
     }
-    return message;
+
+    return null;
 }
 
 function getUserData(pid) {
