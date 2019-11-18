@@ -174,12 +174,13 @@ app.get(process.env.BOT_USOS_OAUTH_CALLBACK_PATH, async(req, res) => {
 app.post(process.env.BOT_NOTIFY_PATH, async(req, res) => {
     //TODO: Validate if the request is coming from a localhost
     let body = req.body;
+    logger.trace("Received notify request", body);
     try {
         await messenger.notify(body.user_ids, body.text);
-        res.send(200);
+        res.sendStatus(200);
     } catch(e) {
         logger.error(e);
-        res.send(500);
+        res.sendStatus(400);
     }
 });
 
