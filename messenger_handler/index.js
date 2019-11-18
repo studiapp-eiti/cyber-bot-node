@@ -1,5 +1,7 @@
 'use strict';
 const api = require("./api_manager");
+const {UrlButton} = require("./objects");
+const {Parser} = require("../messaging_templates");
 const {sleep} = require("../utils");
 const {
     LogoutButton, AccountLinkingHandler, ButtonTemplate, LoginButton,
@@ -46,17 +48,41 @@ async function processRequest(json) {
     }
 }
 
-async function sendNotification(user_ids, text) {
-    for(const user_id of user_ids) {
+async function sendNotification(data) {
+    const parser = new Parser(data.text);
+    for(const user_id of data.user_ids) {
         const user = await User.byId(user_id);
         if(user === null) {
             logger.warn("Invalid user id for notify", user_id);
             continue;
         }
 
-        let msg = new UpdateMessage(null, process.env.MSG_DEFAULT_SENDER_ID, user.facebook_id, new Date(), text);
+        const replaced_text = parser.replace(user);
+        let msg;
+        switch(data.message_type) {
+            case "text":
+            default: {
+                msg = new UpdateMessage(null, process.env.MSG_DEFAULT_SENDER_ID, user.facebook_id, new Date(), replaced_text);
+                msg = await api.sendMessage(msg);
+                break;
+            }
+            case "button": {
+                const buttons = [];
+                for(let btn of data.buttons){
+                    buttons.push(new UrlButton(btn.url, btn.title))
+                }
+
+                const template = new ButtonTemplate(replaced_text, buttons);
+                msg = new UpdateMessage(null, process.env.MSG_DEFAULT_SENDER_ID, user.facebook_id, new Date(), null);
+                msg = await api.sendTemplate(msg, template);
+                if(msg === null) {
+                    throw new Error(`Invalid params for template${JSON.stringify(template, null, 2)}`);
+                }
+                break;
+            }
+        }
+
         logger.trace(msg);
-        msg = await api.sendMessage(msg);
         await sql.insertMessage(msg);
 
         /*

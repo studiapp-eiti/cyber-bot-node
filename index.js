@@ -176,7 +176,7 @@ app.post(process.env.BOT_NOTIFY_PATH, async(req, res) => {
     let body = req.body;
     logger.trace("Received notify request", body);
     try {
-        await messenger.notify(body.user_ids, body.text);
+        await messenger.notify(body);
         res.sendStatus(200);
     } catch(e) {
         logger.error(e);
