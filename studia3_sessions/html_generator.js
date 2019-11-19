@@ -1,3 +1,6 @@
+const moment = require("moment");
+const momentDurationFormatSetup = require("moment-duration-format");
+
 function generateMultiple(entries) {
     let html = "<head><title>Studia3 Login</title>" +
         "<meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\"></head>";
@@ -19,8 +22,8 @@ function generateMultiple(entries) {
  */
 function generateSingle(course_name, course_id, session_alive, last_login) {
     if(session_alive) {
-        return `<p>${course_name} <b>session alive</b> for 
-            ${Math.floor((Date.now() - last_login)/(60*60*1000))} hours</p>`;
+        return `<p>${course_name}: <b>session alive</b> for 
+            ${moment.duration(Date.now() - last_login, "milliseconds").format("d [days] hh [hours] mm [minutes]")}</p>`;
     } else {
         let html = "";
         html += `<form action="" method="POST">`;
