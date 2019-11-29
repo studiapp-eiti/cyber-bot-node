@@ -6,6 +6,7 @@ const messenger = require("./messenger_handler");
 const sql = require("./database").sql;
 const oauth = require("./usos_oauth");
 const User = require("./global_objects").User;
+const studia3 = require("./studia3_sessions");
 
 const fs = require("fs");
 const log4js = require("log4js");
@@ -13,9 +14,12 @@ const argv = require("yargs").argv;
 const https = require("https");
 const crypto = require("crypto");
 const qs = require('qs');
-const express = require('express'),
-    bodyParser = require('body-parser'),
-    app = express().use(bodyParser.json());
+const express = require('express');
+const bodyParser = require('body-parser');
+const app = express()
+    .use(bodyParser.json())
+    .use(bodyParser.urlencoded({extended: true}));
+
 const request = require("request");
 
 log4js.configure({
@@ -32,8 +36,8 @@ const logger = log4js.getLogger();
 logger.info("Process started");
 
 https.createServer({
-    key: fs.readFileSync(process.env.SSL_CERT_KEY),
-    cert: fs.readFileSync(process.env.SSL_CERT_CERT),
+    key: fs.readFileSync(`${__dirname}/${process.env.SSL_CERT_KEY}`),
+    cert: fs.readFileSync(`${__dirname}/${process.env.SSL_CERT_CERT}`),
     passphrase: process.env.SSL_CERT_PASS
 }, app).listen(process.env.HTTPS_PORT).on("error", (e) => {
     if(e.code === "EADDRINUSE") {
@@ -50,12 +54,11 @@ sql.connect().then(() => {
     logger.info("Connected to MySQL");
 }).catch((err) => {
     logger.fatal("[MySQL]", err);
-    logger.info("Process finished, exit code",2);
+    logger.info("Process finished, exit code", 2);
     process.exit(2);
 });
 
 app.post(process.env.BOT_WEBHOOK_PATH, async(req, res) => {
-    logger.trace("Post to webhook");
     let body = req.body;
     if(body.object === "page") {
         for(const entry of body.entry) {
@@ -98,10 +101,8 @@ app.get(process.env.BOT_REGISTER_PATH, async(req, res) => {
         url: oauth.URL_REQUEST_TOKEN,
         method: "POST",
         data: {
-            scopes: "grades",
-            oauth_callback:
-                "https://" + process.env.BOT_DOMAIN + process.env.BOT_PROXY_DIR +
-                process.env.BOT_USOS_OAUTH_CALLBACK_PATH
+            scopes: "grades|offline_access|studies|crstests",
+            oauth_callback: process.env.BOT_BASE_PATH + process.env.BOT_USOS_OAUTH_CALLBACK_PATH
         }
     };
 
@@ -171,14 +172,44 @@ app.get(process.env.BOT_USOS_OAUTH_CALLBACK_PATH, async(req, res) => {
 });
 
 app.post(process.env.BOT_NOTIFY_PATH, async(req, res) => {
-    //TODO: Validate if the request is coming from a localhost
+    if(req.headers['x-forwarded-for'] !== undefined) {
+        res.sendStatus(403);
+        return;
+    }
     let body = req.body;
+    logger.trace("Received notify request", body);
     try {
-        await messenger.notify(body.user_ids, body.text);
-        res.send(200);
+        await messenger.notify(body);
+        res.sendStatus(200);
     } catch(e) {
         logger.error(e);
-        res.send(500);
+        res.sendStatus(400);
+    }
+});
+
+app.get(process.env.BOT_STUDIA_LOGIN_PATH, async(req, res) => {
+    const programs = await sql.getStudia3Programs();
+    res.send(studia3.html.generateMultiple(programs));
+});
+
+app.post(process.env.BOT_STUDIA_LOGIN_PATH, async(req, res) => {
+    const body = req.body;
+    if(body.hasOwnProperty("program_id") && body.hasOwnProperty("password")) {
+        const program_id = body.program_id;
+        const login = await sql.getStudia3LoginForId(program_id);
+        const cookie = await studia3.session.attemptLogin(login, body.password);
+
+        if(cookie !== null) {
+            logger.debug(`Successfully logged into Studia3 for ${program_id}`);
+            await sql.updateStudiaCookie(program_id, cookie);
+            res.redirect(process.env.BOT_BASE_PATH + process.env.BOT_STUDIA_LOGIN_PATH);
+        } else {
+            logger.debug(`Invalid password for Studia3 for ${program_id}`);
+            const courses = await sql.getStudia3Programs();
+            res.send(`${studia3.html.generateMultiple(courses)}<p><b>Invalid password</b></p>`);
+        }
+    } else {
+        res.status(400).send();
     }
 });
 

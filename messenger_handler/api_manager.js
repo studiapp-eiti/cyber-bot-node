@@ -1,5 +1,5 @@
 'use strict';
-const request = require('request');
+const {asyncRequest} = require("../utils");
 const logger = require("log4js").getLogger();
 
 const API_BASE = "https://graph.facebook.com/v5.0";
@@ -22,7 +22,7 @@ async function sendMessage(message) {
         body: message.toJson(),
         json: true
     };
-    logger.trace("Sending message", message.toJson());
+    logger.trace("Sending message", JSON.stringify(message.toJson()));
 
     try {
         let {res, body} = await asyncRequest(API_URL, options);
@@ -64,31 +64,32 @@ function senderAction(action, recipient) {
  */
 async function sendTemplate(message, template) {
     try {
-        const {res, body} = await asyncRequest(API_URL, {
+        const msg_json = message.toJson();
+        msg_json.message.attachment = {
+            type: "template",
+            payload: template
+        };
+        const options = {
             method: "POST",
-            body: {
-                recipient: {
-                    id: message.recipient
-                },
-                message: {
-                    attachment: {
-                        type: "template",
-                        payload: template
-                    }
-                }
-            },
+            body: msg_json,
             json: true
-        });
+        };
+        logger.trace("Sending message", JSON.stringify(options));
 
-        if(res.statusCode !== 200)
+        const {res, body} = await asyncRequest(API_URL, options);
+
+        if(res.statusCode !== 200) {
             logger.error(res.statusCode, body);
-        else {
-            message.id = body["message_id"]
+        } else {
+            message.id = body["message_id"];
+            return message;
         }
-    } catch(e) {
+    } catch
+        (e) {
         logger.error(e);
     }
-    return message;
+
+    return null;
 }
 
 function getUserData(pid) {
@@ -97,23 +98,6 @@ function getUserData(pid) {
 
 function getUserIdForLinkingToken(linking_token) {
     return asyncRequest(LINKING_TOKEN_URL.replace("$token$", linking_token));
-}
-
-/**
- *
- * @param url
- * @param options
- * @return {Promise}
- */
-function asyncRequest(url, options) {
-    return new Promise((resolve, reject) => {
-        request(url, options, (err, res, body) => {
-            if(err === null)
-                resolve({res: res, body: body});
-            else
-                reject(err);
-        })
-    })
 }
 
 module.exports.ACTION_SEEN = ACTION_SEEN;

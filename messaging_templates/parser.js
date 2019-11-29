@@ -45,9 +45,9 @@ class Parser {
                     this.target.type = Parser.TARGET_COURSE;
                     this.target.fields = [parseInt(course_match[1])];
                 } else if(locale_match !== null) {
-                    this.target.query = `locale = ?`;
-                    this.target.type = Parser.TARGET_COURSE;
-                    this.target.fields = [parseInt(locale_match[2])];
+                    this.target.query = `locale LIKE ?`;
+                    this.target.type = Parser.TARGET_LOCALE;
+                    this.target.fields = [`${locale_match[2]}%`];
                 }else {
                     this.target = null;
                 }
@@ -70,6 +70,8 @@ class Parser {
                         if(user.hasOwnProperty($2)) {
                             return user[$2];
                         } else if($2 === "name") {
+                            return user.nickname !== null ? user.nickname : user.first_name;
+                        }else if($2 === "full_name") {
                             return user.formatName();
                         }
                         break;
@@ -106,11 +108,11 @@ class Parser {
                             return match;
                         }
 
-                        const localized_target = Parser.TARGET_LOCALIZATION[locale][this.target.type];
+                        const localized_target = Parser.TARGET_LOCALIZATION[locale][this.target.type].toLowerCase();
 
                         switch($2) {
                             case"": {
-                                return localized_target.toLocaleString;
+                                return localized_target;
                             }
                             case "capital": {
                                 return localized_target.toLowerCase()
@@ -139,14 +141,14 @@ Parser.TARGET_LOCALIZATION = {
         "male": "men",
         "female": "women",
         "registered": "registered",
-        "locale": "language",
+        "locale": "English language",
     },
     "pl": {
         "all": "wszyscy",
         "male": "panowie",
         "female": "panie",
         "registered": "zarejestrowani",
-        "locale": "język",
+        "locale": "język polski",
     }
 };
 

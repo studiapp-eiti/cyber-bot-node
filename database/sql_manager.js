@@ -6,24 +6,30 @@ const TABLE_USERS = "users";
 const TABLE_EVENTS = "msg_events";
 const TABLE_MESSAGES = "msg_messages";
 const TABLE_LOGIN_FLOW = "login_flow";
+const TABLE_STUDIA3_SESSIONS = "studia3_sessions";
 
 const FIELDS_MESSAGE = [`${TABLE_MESSAGES}.id`, "sender", "recipient", "timestamp", "text"];
 const FIELDS_EVENT = ["sender", "recipient", "timestamp", "text", "payload"];
-const FIELDS_USER = [`${TABLE_USERS}.id`, "first_name", "last_name", "facebook_id", "gender", "locale"];
+const FIELDS_USER = [`${TABLE_USERS}.id`, "first_name", "last_name", "nickname", "msg_state",
+    "facebook_id", "gender", "locale"];
 const FIELDS_LOGIN_FLOW = ["user_id", "messenger_linking_token", "messenger_callback_url",
     "messenger_auth_code", "usos_oauth_token", "usos_oauth_secret"];
+const FIELDS_STUDIA3_SESSIONS = ["maintainer_id", "studia_login", "program_id", "cookie"];
 
 const connection = sql.createConnection({
     host: process.env.DB_HOST,
     user: process.env.DB_USER,
     password: process.env.DB_PASSWD,
     database: process.env.DB_NAME,
+    charset: 'utf8mb4'
 });
 
 const logger = require("log4js").getLogger();
 
 function asyncQuery(query, values) {
-    logger.trace(`Executing query '${query}' with values [${values.toString()}]`);
+    logger.trace(`Executing query '${query.replace(/\s{2,}/, " ")}' with values ` +
+        `[${values.map(str => str === null ? "NULL" : str.toString().substring(0, 10)).toString()}]`);
+
     return new Promise((resolve, reject) => {
         connection.query(query, values, (err, result, fields) => {
             err === null ? resolve({result: result, fields: fields}) : reject(err);
@@ -73,7 +79,7 @@ function insertEvent(event) {
  * @param {User} user
  */
 function insertUser(user) {
-    let query = `INSERT INTO ${TABLE_USERS} (${FIELDS_USER.join(",")}) VALUES (?, ?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE `;
+    let query = `INSERT INTO ${TABLE_USERS} (${FIELDS_USER.join(",")}) VALUES (?, ?, ?, ?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE `;
     for(let i = 1; i < FIELDS_USER.length; i++) {
         query += `${FIELDS_USER[i]} = VALUES(${FIELDS_USER[i]}),`
     }
@@ -137,6 +143,27 @@ function updateUserRegistered(user_id, registered = true) {
     return asyncQuery(sql, [registered, user_id])
 }
 
+async function getStudia3Programs() {
+    const sql = `SELECT up.program_id, 
+       IF(expires < NOW() AND  NOW() > ADDDATE(last_login, INTERVAL 15 MINUTE), NULL, cookie) as 'cookie', 
+       short_program_name_en as program_name, last_login 
+    FROM ${TABLE_STUDIA3_SESSIONS} st JOIN usos_programs up ON st.program_id = up.program_id ORDER BY up.program_id`;
+    const {result} = await asyncQuery(sql, []);
+    return result;
+}
+
+async function getStudia3LoginForId(course_id) {
+    const sql = `SELECT studia_login FROM ${TABLE_STUDIA3_SESSIONS} WHERE program_id = ?`;
+    const {result} = await asyncQuery(sql, [course_id]);
+    return result[0] !== undefined ? result[0].studia_login : null;
+}
+
+function updateStudiaCookie(program_id, cookie) {
+    const sql = `UPDATE ${TABLE_STUDIA3_SESSIONS} SET cookie = ?, last_login = NOW(), expires = 
+                DATE_ADD(NOW(), INTERVAL 15 MINUTE) WHERE program_id = ?`;
+    return asyncQuery(sql, [cookie, program_id]);
+}
+
 module.exports.connect = connect;
 module.exports.disconnect = disconnect;
 
@@ -152,3 +179,7 @@ module.exports.insertLoginAttempt = insertLoginAttempt;
 module.exports.getLoginFlowByToken = getLoginFlowByToken;
 module.exports.updateUsosTokensForUserId = updateUsosTokensForUserId;
 module.exports.updateUserRegistered = updateUserRegistered;
+
+module.exports.getStudia3Programs = getStudia3Programs;
+module.exports.getStudia3LoginForId = getStudia3LoginForId;
+module.exports.updateStudiaCookie = updateStudiaCookie;

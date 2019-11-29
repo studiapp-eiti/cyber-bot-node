@@ -1,10 +1,11 @@
 'use strict';
 const api = require("./api_manager");
+const {UrlButton} = require("./objects");
 const {Parser} = require("../messaging_templates");
+const {sleep} = require("../utils");
 const {
-    LogoutButton, AccountLinkingHandler, LocationQuickReply,
-    TextQuickReply, QuickReplyCreator, ButtonTemplate, LoginButton,
-    MessageHandler, UpdateMessage, EventHandler, AccountLinkingEvent, BaseHandler
+    LogoutButton, AccountLinkingHandler, ButtonTemplate, LoginButton,
+    MessageHandler, UpdateMessage, EventHandler, BaseHandler
 }
     = require("./objects");
 const User = require("../global_objects").User;
@@ -15,7 +16,14 @@ async function processRequest(json) {
     const handler = BaseHandler.fromJson(json);
     logger.trace(`Processing message request for ${handler.request.sender}`);
     if(handler instanceof MessageHandler) {
-        let text = handler.request.text;
+        if(handler.request.text === undefined) {
+            await handler.reply("Messages without text are not supported");
+            return;
+        }
+
+        logger.trace(handler.request);
+
+        const text = handler.request.text;
         await sql.insertMessage(handler.request);
         if(text.toLowerCase() === "login") {
             const buttons = [LoginButton.defaults()];
@@ -25,76 +33,63 @@ async function processRequest(json) {
             const buttons = [new LogoutButton()];
             const template = new ButtonTemplate("Click here to log out", buttons);
             await handler.reply(template);
-        } else if(text.toLowerCase() === "fizyka" || text.toLowerCase() === "dropbox") {
-            await handler.reply("https://www.dropbox.com/sh/x4g4lci5gnb61wc/AAAV4Skzaac-k3vrprF_nN-la?dl=0");
         } else {
             logger.trace("Received generic message", text);
-            const sender = await User.fromFacebookId(handler.request.sender);
-            if(sender.is_admin) {
-                const parser = new Parser(text);
-                parser.parse();
-                if(parser.target !== null) {
-                    const users = await sql.queryUsersByTarget(parser.target);
-                    let count = 0;
-                    for(const u of users) {
-                        if(sender.id === u.id) {
-                            continue;
-                        }
-
-                        count++;
-                        const msg = new UpdateMessage(null,
-                            process.env.MSG_DEFAULT_SENDER_ID,
-                            u.facebook_id,
-                            new Date(),
-                            parser.replace(u)
-                        );
-
-                        await api.sendMessage(msg);
-                    }
-
-                    await handler.reply(`Sent to ${count}: '${parser.replace(sender)}'`);
-                } else {
-                    await handler.reply("Unknown command");
-                }
-            } else {
-                await handler.reply("Unknown command");
-            }
+            await handler.processGenericMessage();
         }
     } else if(handler instanceof EventHandler) {
         await handler.handleEvent();
         await handler.typing(false);
     } else if(handler instanceof AccountLinkingHandler) {
-        let status = await handler.updateUser();
-        if(status === AccountLinkingEvent.STATUS_LINKED) {
-            await handler.reply("Your USOS account has been linked successfully!");
-            await handler.reply("You can manage your notification settings using the menu");
-        } else if(status === AccountLinkingEvent.STATUS_UNLINKED) {
-            const user = await User.fromFacebookId(handler.request.sender);
-            if(user === null) {
-                logger.error("Unlinking nonexistent user id", handler.request.sender);
-            } else {
-                logger.debug("Unlinked successfully, user", user.id);
-                await sql.updateUsosTokensForUserId(user.id, null, null);
-                await sql.updateUserRegistered(user.id, false);
-            }
-            await handler.reply("Your USOS account has been unlinked successfully!");
-        }
+        await handler.updateUser();
+        await handler.reply();
     } else {
-        throw new Error(`Invalid Object: ${typeof handler}`);
+        throw new Error(`Invalid object: ${typeof handler}`);
     }
 }
 
-async function sendNotification(user_ids, text) {
-    for(const user_id of user_ids) {
+async function sendNotification(data) {
+    const parser = new Parser(data.text);
+    for(const user_id of data.user_ids) {
         const user = await User.byId(user_id);
         if(user === null) {
             logger.warn("Invalid user id for notify", user_id);
             continue;
         }
-        let msg = new UpdateMessage(null, process.env.MSG_DEFAULT_SENDER_ID, user.facebook_id, new Date(), text);
+
+        const replaced_text = parser.replace(user);
+        let msg;
+        switch(data.message_type) {
+            case "text":
+            default: {
+                msg = new UpdateMessage(null, process.env.MSG_DEFAULT_SENDER_ID, user.facebook_id, new Date(), replaced_text);
+                msg = await api.sendMessage(msg);
+                break;
+            }
+            case "button": {
+                const buttons = [];
+                for(let btn of data.buttons){
+                    buttons.push(new UrlButton(btn.url, btn.title))
+                }
+
+                const template = new ButtonTemplate(replaced_text, buttons);
+                msg = new UpdateMessage(null, process.env.MSG_DEFAULT_SENDER_ID, user.facebook_id, new Date(), null);
+                msg = await api.sendTemplate(msg, template);
+                if(msg === null) {
+                    throw new Error(`Invalid params for template${JSON.stringify(template, null, 2)}`);
+                }
+                break;
+            }
+        }
+
         logger.trace(msg);
-        msg = await api.sendMessage(msg);
         await sql.insertMessage(msg);
+
+        /*
+         * We do not want to become a high-MPS page. We can only safely send 40mps. See, for reference:
+         * https://developers.facebook.com/docs/messenger-platform/send-messages/high-mps
+         */
+        await sleep(100);
         logger.debug("Sending notification to", user_id);
     }
 }
