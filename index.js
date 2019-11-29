@@ -172,7 +172,10 @@ app.get(process.env.BOT_USOS_OAUTH_CALLBACK_PATH, async(req, res) => {
 });
 
 app.post(process.env.BOT_NOTIFY_PATH, async(req, res) => {
-    //TODO: Validate if the request is coming from a localhost
+    if(req.headers['x-forwarded-for'] !== undefined) {
+        res.sendStatus(403);
+        return;
+    }
     let body = req.body;
     logger.trace("Received notify request", body);
     try {
