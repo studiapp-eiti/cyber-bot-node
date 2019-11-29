@@ -145,7 +145,7 @@ function updateUserRegistered(user_id, registered = true) {
 
 async function getStudia3Programs() {
     const sql = `SELECT up.program_id, 
-       IF(expires > NOW() AND last_login < SUBDATE(NOW(), INTERVAL 15 MINUTE), NULL, cookie) as 'cookie', 
+       IF(expires < NOW() AND  NOW() > ADDDATE(last_login, INTERVAL 15 MINUTE), NULL, cookie) as 'cookie', 
        short_program_name_en as program_name, last_login 
     FROM ${TABLE_STUDIA3_SESSIONS} st JOIN usos_programs up ON st.program_id = up.program_id ORDER BY up.program_id`;
     const {result} = await asyncQuery(sql, []);
