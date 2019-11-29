@@ -50,7 +50,7 @@ class User {
      */
     static fromJson(json) {
         return new User(null, json.first_name, json.last_name, null, json.id,
-            User.STATE_NO_STATE, json.gender, json.locale, false, false);
+            User.STATE_NO_STATE, json.gender, json.locale.substring(0, 2), false, false);
     }
 
     /**
