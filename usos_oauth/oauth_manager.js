@@ -8,6 +8,9 @@ const logger = require("log4js").getLogger();
 const qs = require('qs');
 const {asyncRequest} = require("../utils");
 
+const util = require('util');
+const exec = util.promisify(require('child_process').exec);
+
 const oauth = OAuth({
     consumer: {key: process.env.USOS_KEY, secret: process.env.USOS_SECRET},
     signature_method: "HMAC-SHA1",
@@ -92,6 +95,15 @@ async function handleUsosOauthResponse(oauth_token, oauth_verifier) {
         await sql.updateUserRegistered(user_id, true);
 
         logger.debug("Registered successfully user_id -", user_id);
+        try {
+            await exec(
+                `python3 ${process.env.PYTHON_ROOT_PATH + process.env.PYTHON_USOS_USER_INFO} ${user_id}`, {
+                    env: {PYTHONPATH: process.env.PYTHONPATH}
+                }
+            );
+        } catch(e) {
+            logger.error(`Error running python script ${process.env.PYTHON_USOS_USER_INFO}`, e);
+        }
 
         return {callback_url: login_flow.messenger_callback_url, auth_code: login_flow.messenger_auth_code};
     } catch(e) {
