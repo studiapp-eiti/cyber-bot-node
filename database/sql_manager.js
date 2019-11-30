@@ -81,11 +81,12 @@ function insertEvent(event) {
  * @param {User} user
  */
 function insertUser(user) {
+    const fields = ["id", "fb_first_name", "fb_last_name", "nickname", "msg_state", "facebook_id", "gender", "locale"];
     let query = `INSERT INTO ${TABLE_USERS} 
-    (${["id", "fb_first_name", "fb_last_name", "nickname", "msg_state", "facebook_id", "gender", "locale"].join(",")}) 
+    (${fields.join(",")}) 
     VALUES (?, ?, ?, ?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE `;
-    for(let i = 1; i < FIELDS_USER.length; i++) {
-        query += `${FIELDS_USER[i]} = VALUES(${FIELDS_USER[i]}),`
+    for(let i = 1; i < fields.length; i++) {
+        query += `${fields[i]} = VALUES(${fields[i]}),`
     }
     query = query.substring(0, query.length - 1);
     return asyncQuery(query, user.asDbArray());
