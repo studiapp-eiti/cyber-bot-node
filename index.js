@@ -25,10 +25,10 @@ const request = require("request");
 log4js.configure({
     appenders: {
         out: {type: 'stdout'},
-        file: {type: 'file', filename: `${__dirname}/${argv["o"] ? argv["o"] : "bot.log"}`}
+        file: {type: 'file', filename: `${__dirname}/${argv["o"] ? argv["o"] : process.env.LOG_DEFAULT_FILE}`}
     },
     categories: {
-        default: {appenders: ['out', 'file'], level: argv["l"] ? argv["l"] : "info"}
+        default: {appenders: ['out', 'file'], level: argv["l"] ? argv["l"] : process.env.LOG_DEFAULT_LEVEL}
     }
 });
 
