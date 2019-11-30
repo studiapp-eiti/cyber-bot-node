@@ -17,7 +17,7 @@ const oauth = OAuth({
             .update(base_string)
             .digest("base64")
     }
-})
+});
 
 oauth.URL_BASE = "https://apps.usos.pw.edu.pl/services";
 oauth.URL_AUTHORIZE = oauth.URL_BASE + "/oauth/authorize";

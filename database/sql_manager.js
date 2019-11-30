@@ -10,8 +10,10 @@ const TABLE_STUDIA3_SESSIONS = "studia3_sessions";
 
 const FIELDS_MESSAGE = [`${TABLE_MESSAGES}.id`, "sender", "recipient", "timestamp", "text"];
 const FIELDS_EVENT = ["sender", "recipient", "timestamp", "text", "payload"];
-const FIELDS_USER = [`${TABLE_USERS}.id`, "first_name", "last_name", "nickname", "msg_state",
+const FIELDS_USER = [`${TABLE_USERS}.id`, "IF(ISNULL(usos_first_name), fb_first_name, usos_first_name) as 'first_name'",
+    "IF(ISNULL(usos_last_name), fb_last_name, usos_last_name) as 'last_name'", "nickname", "msg_state",
     "facebook_id", "gender", "locale"];
+
 const FIELDS_LOGIN_FLOW = ["user_id", "messenger_linking_token", "messenger_callback_url",
     "messenger_auth_code", "usos_oauth_token", "usos_oauth_secret"];
 const FIELDS_STUDIA3_SESSIONS = ["maintainer_id", "studia_login", "program_id", "cookie"];
@@ -79,12 +81,14 @@ function insertEvent(event) {
  * @param {User} user
  */
 function insertUser(user) {
-    let query = `INSERT INTO ${TABLE_USERS} (${FIELDS_USER.join(",")}) VALUES (?, ?, ?, ?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE `;
+    let query = `INSERT INTO ${TABLE_USERS} 
+    (${["id", "fb_first_name", "fb_last_name", "nickname", "msg_state", "facebook_id", "gender", "locale"].join(",")}) 
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE `;
     for(let i = 1; i < FIELDS_USER.length; i++) {
         query += `${FIELDS_USER[i]} = VALUES(${FIELDS_USER[i]}),`
     }
     query = query.substring(0, query.length - 1);
-    return asyncQuery(query, user.asArray());
+    return asyncQuery(query, user.asDbArray());
 }
 
 async function queryUserById(id) {

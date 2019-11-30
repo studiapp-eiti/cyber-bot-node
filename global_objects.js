@@ -120,7 +120,7 @@ class User {
         return this.last_name + " " + this.first_name;
     }
 
-    asArray(fields) {
+    asDbArray(fields) {
         if(fields === undefined) {
             fields = User.ALL_FIELDS;
         }
