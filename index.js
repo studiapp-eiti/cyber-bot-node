@@ -97,78 +97,19 @@ app.get(process.env.BOT_REGISTER_PATH, async(req, res) => {
 
     logger.debug("Registering user", user.id);
 
-    const request_data = {
-        url: oauth.URL_REQUEST_TOKEN,
-        method: "POST",
-        data: {
-            scopes: "grades|offline_access|studies|crstests",
-            oauth_callback: process.env.BOT_BASE_PATH + process.env.BOT_USOS_OAUTH_CALLBACK_PATH
-        }
-    };
-
-    request({
-        url: request_data.url,
-        method: request_data.method,
-        form: oauth.authorize(request_data)
-    }, async(err, r, body) => {
-        if(err !== null) {
-            logger.error(err);
-            return;
-        }
-
-        const data = qs.parse(body);
-        await sql.insertLoginAttempt(
-            user.id,
-            req.query.account_linking_token,
-            req.query.redirect_uri,
-            crypto.randomBytes(32).toString("hex"),
-            data.oauth_token,
-            data.oauth_token_secret
-        );
-
-        logger.debug("Got USOS tokens, redirecting to authorize for user", user.id);
-        res.redirect(`${oauth.URL_AUTHORIZE}?oauth_token=${data.oauth_token}`);
-    });
+    const oauth_token = await oauth.requestToken(user, req.query.account_linking_token, req.query.redirect_uri);
+    if(oauth_token == null) {
+        res.redirect(req.query.redirect_uri);
+    } else {
+        res.redirect(`${oauth.URL_AUTHORIZE}?oauth_token=${oauth_token}`);
+    }
 });
 
 app.get(process.env.BOT_USOS_OAUTH_CALLBACK_PATH, async(req, res) => {
-    const token_key = req.query.oauth_token;
-    let login_flow = await sql.getLoginFlowByToken(token_key);
-    const token = {
-        key: token_key,
-        secret: login_flow.usos_oauth_secret
-    };
+    const {callback_url, auth_code} =
+        await oauth.handleUsosOauthResponse(req.query.oauth_token, req.query.oauth_verifier);
 
-    const user_id = login_flow.user_id;
-    logger.debug("Received USOS token callback for user", user_id);
-
-    const request_data = {
-        url: oauth.URL_ACCESS_TOKEN,
-        method: "POST",
-        data: {
-            oauth_token: token_key,
-            oauth_verifier: req.query.oauth_verifier
-        }
-    };
-
-    request({
-        url: request_data.url,
-        method: request_data.method,
-        form: oauth.authorize(request_data, token)
-    }, async(err, r, body) => {
-        if(err !== null) {
-            logger.error(err);
-            return;
-        }
-
-        const json = qs.parse(body);
-
-        await sql.updateUsosTokensForUserId(user_id, json.oauth_token, json.oauth_token_secret);
-        await sql.updateUserRegistered(user_id, true);
-
-        logger.debug("Registered successfully user_id -", user_id);
-        res.redirect(`${login_flow.messenger_callback_url}&authorization_code=${login_flow.messenger_auth_code}`);
-    });
+    res.redirect(`${callback_url}&authorization_code=${auth_code}`);
 });
 
 app.post(process.env.BOT_NOTIFY_PATH, async(req, res) => {
@@ -180,10 +121,10 @@ app.post(process.env.BOT_NOTIFY_PATH, async(req, res) => {
     logger.trace("Received notify request", body);
     try {
         await messenger.notify(body);
-        res.sendStatus(200);
+        res.status(200).send();
     } catch(e) {
         logger.error(e);
-        res.sendStatus(400);
+        res.status(400).send();
     }
 });
 
