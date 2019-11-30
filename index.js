@@ -98,7 +98,7 @@ app.get(process.env.BOT_REGISTER_PATH, async(req, res) => {
     logger.debug("Registering user", user.id);
 
     const oauth_token = await oauth.requestToken(user, req.query.account_linking_token, req.query.redirect_uri);
-    if(oauth_token == null) {
+    if(oauth_token === null) {
         res.redirect(req.query.redirect_uri);
     } else {
         res.redirect(`${oauth.URL_AUTHORIZE}?oauth_token=${oauth_token}`);
@@ -106,10 +106,13 @@ app.get(process.env.BOT_REGISTER_PATH, async(req, res) => {
 });
 
 app.get(process.env.BOT_USOS_OAUTH_CALLBACK_PATH, async(req, res) => {
-    const {callback_url, auth_code} =
-        await oauth.handleUsosOauthResponse(req.query.oauth_token, req.query.oauth_verifier);
-
-    res.redirect(`${callback_url}&authorization_code=${auth_code}`);
+    const data = await oauth.handleUsosOauthResponse(req.query.oauth_token, req.query.oauth_verifier);
+    if(data === null) {
+        res.status(400).send();
+    } else {
+        const {callback_url, auth_code} = data;
+        res.redirect(`${callback_url}&authorization_code=${auth_code}`);
+    }
 });
 
 app.post(process.env.BOT_NOTIFY_PATH, async(req, res) => {
