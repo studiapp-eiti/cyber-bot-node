@@ -141,6 +141,7 @@ User.STATE_NO_STATE = -1;
 User.STATE_ASK_NICKNAME = 100;
 User.STATE_INPUT_NICKNAME = 101;
 User.STATE_CONFIRM_NICKNAME = 102;
+User.STATE_FEEDBACK = 200;
 
 User.ALL_FIELDS = ["id", "first_name", "last_name", "nickname", "msg_state", "facebook_id", "gender", "locale"];
 

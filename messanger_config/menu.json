@@ -16,8 +16,8 @@
         },
         {
           "type": "postback",
-          "title": "Info",
-          "payload": "menu_info"
+          "title": "Feedback",
+          "payload": "menu_feedback"
         }
       ]
     },
@@ -37,8 +37,8 @@
         },
         {
           "type": "postback",
-          "title": "Informacje",
-          "payload": "menu_info"
+          "title": "Feedback",
+          "payload": "menu_feedback"
         }
       ]
     }

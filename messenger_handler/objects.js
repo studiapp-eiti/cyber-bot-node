@@ -10,6 +10,8 @@ const NICKNAME_MIN_LENGTH = 1;
 const NICKNAME_MAX_LENGTH = 24;
 const REGEX_NICKNAME = /^[a-zA-Z\d ]+$/;
 
+const FEEDBACK_MAX_LENGTH = 500;
+
 class MessagingBase {
     constructor(sender, recipient, timestamp) {
         this.sender = sender;
@@ -383,6 +385,14 @@ class MessageHandler extends BaseHandler {
                 await this.reply(`I will call you ${user.nickname} from now on`);
             }
             return;
+        } else if(user.msg_state === User.STATE_FEEDBACK) {
+            const ticket_id = await sql.insertFeedback(text.substring(0, FEEDBACK_MAX_LENGTH), user.id);
+
+            user.msg_state = User.STATE_NO_STATE;
+            await user.save();
+
+            await this.reply(`Thanks for submitting feedback - No. ${ticket_id}`);
+            return;
         }
 
         if(user.is_admin) {
@@ -545,8 +555,28 @@ class EventHandler extends BaseHandler {
                 }
                 break;
             }
-            case "menu_info": {
-                await this.reply("This bot can notify you about new files, grades, assignments and your schedule");
+            case "menu_feedback": {
+                user.msg_state = User.STATE_FEEDBACK;
+                await user.save();
+
+                //TODO: Ask the user if he or she is submitting a bug report or general feedback
+                const quick_replies = [
+                    new TextQuickReply("Cancel", "feedback_cancel")
+                ];
+                const creator = new QuickReplyCreator(
+                    "Input you feedback below. " +
+                    "If you discovered a bug describe how to replicate it if possible.", quick_replies);
+                await this.reply(creator);
+
+                break;
+            }
+            case "feedback_cancel": {
+                user.msg_state = User.STATE_NO_STATE;
+                await user.save();
+
+                await this.reply(
+                    "Your feedback was not recorded. " +
+                    "If you ever wish to submit a bug report or feedback click 'Feedback' again.");
                 break;
             }
             case "menu_nickname": {

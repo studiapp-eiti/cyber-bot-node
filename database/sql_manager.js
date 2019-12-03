@@ -169,6 +169,13 @@ function updateStudiaCookie(program_id, cookie) {
     return asyncQuery(sql, [cookie, program_id]);
 }
 
+async function insertFeedback(text, user_id, is_bug = false) {
+    const sql = `INSERT INTO msg_feedback (text, user_id, is_bug) VALUES (?, ?, ?)`;
+    let {result} = await asyncQuery(sql, [text, user_id, is_bug]);
+
+    return result.insertId;
+}
+
 module.exports.connect = connect;
 module.exports.disconnect = disconnect;
 
@@ -188,3 +195,5 @@ module.exports.updateUserRegistered = updateUserRegistered;
 module.exports.getStudia3Programs = getStudia3Programs;
 module.exports.getStudia3LoginForId = getStudia3LoginForId;
 module.exports.updateStudiaCookie = updateStudiaCookie;
+
+module.exports.insertFeedback = insertFeedback;
